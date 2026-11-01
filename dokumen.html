@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dokumen Tersimpan — Masterpiece.id</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="mp-shell.css">
+<script src="mp-shell.js"></script>
+<script src="mp-docs.js"></script>
+<style>
+  .dk-bar{ display:flex; gap:12px; flex-wrap:wrap; align-items:center; margin-bottom:16px; }
+  .dk-bar .grow{ flex:1; min-width:220px; position:relative; }
+  .dk-bar .grow svg{ position:absolute; left:14px; top:50%; transform:translateY(-50%); width:16px; height:16px; stroke:var(--ink-faint); fill:none; stroke-width:1.8; }
+  .dk-bar .grow input{ padding-left:40px; }
+  .dk-f{ display:flex; gap:6px; flex-wrap:wrap; }
+  .dk-f button{ font:600 12.5px Inter,sans-serif; border:1px solid var(--line); background:var(--paper); color:var(--ink-soft); border-radius:999px; padding:7px 14px; cursor:pointer; }
+  .dk-f button.on{ background:var(--forest-soft); color:var(--forest); border-color:transparent; }
+  .dk-row{ display:grid; grid-template-columns:96px minmax(0,1.1fr) minmax(0,1.5fr) 128px 112px 196px; gap:12px; align-items:center; padding:13px 18px; border-bottom:1px solid var(--line); font-size:13px; }
+  .dk-row:last-child{ border-bottom:0; }
+  .dk-row.h{ font:700 10.5px Inter,sans-serif; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-faint); background:var(--cream); }
+  .dk-row .no{ font-weight:700; font-variant-numeric:tabular-nums; }
+  .dk-row .sub{ color:var(--ink-soft); font-size:12px; margin-top:2px; }
+  .dk-row .n{ text-align:right; font-variant-numeric:tabular-nums; font-weight:600; }
+  .dk-act{ display:flex; gap:6px; justify-content:flex-end; }
+  .dk-act a,.dk-act button{ font:600 12px Inter,sans-serif; border:1px solid var(--line); background:var(--paper); color:var(--ink); border-radius:8px; padding:6px 10px; cursor:pointer; text-decoration:none; }
+  .dk-act a:hover,.dk-act button:hover{ background:var(--cream); }
+  .dk-act .del:hover{ color:var(--rust); border-color:var(--rust); }
+  .dk-new{ display:flex; gap:8px; flex-wrap:wrap; }
+  @media (max-width:900px){
+    .dk-row{ grid-template-columns:1fr auto; gap:6px 12px; }
+    .dk-row.h{ display:none; }
+    .dk-row .c-tipe,.dk-row .c-tgl{ display:none; }
+    .dk-act{ grid-column:1/-1; justify-content:flex-start; }
+  }
+</style>
+</head>
+<body>
+<main class="mp-main"><div class="mp-wrap" style="max-width:1180px">
+  <div id="tabsHost"></div>
+  <div class="mp-head">
+    <div>
+      <h1 class="mp-title">Dokumen Tersimpan</h1>
+      <p class="mp-sub">Semua invoice, kwitansi, dan RAB yang sudah disimpan. Buka untuk mengedit, duplikat untuk dokumen serupa.</p>
+    </div>
+    <div class="mp-actions dk-new">
+      <a class="mp-btn" href="rab.html" id="aRab"></a>
+      <a class="mp-btn" href="kontrak.html" id="aKt"></a>
+      <a class="mp-btn" href="kwitansi.html" id="aKw"></a>
+      <a class="mp-btn dark" href="invoice.html" id="aInv"></a>
+    </div>
+  </div>
+  <div class="dk-bar">
+    <div class="grow"><span id="icS"></span><input class="mp-input" id="q" placeholder="Cari nomor, klien, proyek…"></div>
+    <div class="dk-f" id="flt">
+      <button type="button" data-t="all" class="on">Semua</button>
+      <button type="button" data-t="invoice">Invoice</button>
+      <button type="button" data-t="kwitansi">Kwitansi</button>
+      <button type="button" data-t="rab">RAB</button>
+      <button type="button" data-t="kontrak">Kontrak</button>
+    </div>
+  </div>
+  <div class="mp-card flush" id="list"><div class="mp-loading">Memuat…</div></div>
+</div></main>
+
+<script>
+MP.ready(async function () {
+  var $ = MP.$, esc = MP.esc, docs = [], inv = [], tipe = 'all';
+  $('#tabsHost').innerHTML = MPD.tabs('dokumen');
+  $('#icS').innerHTML = MP.icon('search');
+  try { var q0 = new URLSearchParams(location.search).get('q'); if (q0) $('#q').value = q0; } catch (e) {}
+  $('#aInv').innerHTML = MP.icon('plus') + ' Invoice';
+  $('#aKw').innerHTML = MP.icon('plus') + ' Kwitansi';
+  $('#aRab').innerHTML = MP.icon('plus') + ' RAB';
+  $('#aKt').innerHTML = MP.icon('plus') + ' Kontrak';
+
+  var LBL = { invoice: 'Invoice', kwitansi: 'Kwitansi', rab: 'RAB', kontrak: 'Kontrak' };
+  var PAGE = { invoice: 'invoice.html', kwitansi: 'kwitansi.html', rab: 'rab.html', kontrak: 'kontrak.html' };
+
+  function payPill(d) {
+    if (d.tipe !== 'invoice') return '<span class="mp-pill gray">' + (LBL[d.tipe] || d.tipe) + '</span>';
+    var iv = inv.filter(function (x) { return String(x.noInvoice) === String(d.nomor); })[0];
+    var st = iv ? String(iv.status || '').toLowerCase() : '';
+    var lunas = st.indexOf('belum') === -1 && st.indexOf('lunas') !== -1;
+    return '<span class="mp-pill ' + (lunas ? 'green' : 'amber') + '">' + (lunas ? 'Lunas' : 'Belum lunas') + '</span>';
+  }
+  function render() {
+    var q = $('#q').value.trim().toLowerCase();
+    var f = docs.filter(function (d) {
+      if (tipe !== 'all' && d.tipe !== tipe) return false;
+      if (!q) return true;
+      return [d.nomor, d.klienNama, d.proyekKode, d.proyekNama].join(' ').toLowerCase().indexOf(q) !== -1;
+    }).sort(function (a, b) { return String(b.tanggal).localeCompare(String(a.tanggal)) || String(b.nomor).localeCompare(String(a.nomor)); });
+    if (!f.length) { $('#list').innerHTML = '<div class="mp-empty">' + (docs.length ? 'Tidak ada dokumen yang cocok.' : 'Belum ada dokumen. Buat invoice, kwitansi, atau RAB pertama.') + '</div>'; return; }
+    $('#list').innerHTML = '<div class="dk-row h"><span>Jenis</span><span>Nomor</span><span>Klien / Proyek</span><span style="text-align:right">Total</span><span>Tanggal</span><span></span></div>' +
+      f.map(function (d) {
+        var pg = PAGE[d.tipe] || 'invoice.html';
+        return '<div class="dk-row" data-id="' + esc(d.idDokumen) + '"><span class="c-tipe">' + payPill(d) + '</span>' +
+          '<span><div class="no">' + esc(d.nomor || '—') + '</div><div class="sub">' + esc(LBL[d.tipe] || d.tipe) + '</div></span>' +
+          '<span><div style="font-weight:600">' + esc(d.klienNama || '—') + '</div><div class="sub">' + esc(d.proyekNama || d.proyekKode || '') + '</div></span>' +
+          '<span class="n">' + MP.rupiah(MP.num(d.total)) + '</span>' +
+          '<span class="c-tgl" style="color:var(--ink-soft)">' + esc(MP.fmtDate(d.tanggal)) + '</span>' +
+          '<span class="dk-act"><a href="' + pg + '?id=' + encodeURIComponent(d.idDokumen) + '">Buka</a>' +
+          '<a href="' + pg + '?dup=' + encodeURIComponent(d.idDokumen) + '">Duplikat</a>' +
+          (MP.priv ? '<button type="button" class="del" data-del="' + esc(d.idDokumen) + '">Hapus</button>' : '') + '</span></div>';
+      }).join('');
+  }
+  $('#q').addEventListener('input', MP.debounce ? MP.debounce(render, 120) : render);
+  $('#flt').addEventListener('click', function (e) {
+    var b = e.target.closest('button[data-t]'); if (!b) return;
+    tipe = b.dataset.t; MP.$$('#flt button').forEach(function (x) { x.classList.toggle('on', x === b); }); render();
+  });
+  $('#list').addEventListener('click', async function (e) {
+    var b = e.target.closest('[data-del]'); if (!b) return;
+    var d = docs.filter(function (x) { return String(x.idDokumen) === b.dataset.del; })[0];
+    if (!d || !(await MP.confirm('Hapus ' + (LBL[d.tipe] || 'dokumen') + ' ' + (d.nomor || '') + '?' + (d.tipe === 'invoice' ? ' Invoice ini juga hilang dari daftar piutang.' : '')))) return;
+    var r = await MP.post('deleteDokumen', { idDokumen: d.idDokumen });
+    if (!r.success) return MP.toast(r.message || 'Gagal menghapus', 'err');
+    docs = docs.filter(function (x) { return x !== d; }); render(); MP.toast('Dokumen dihapus', 'ok');
+  });
+
+  var c = await MPD.loadCommon();
+  docs = c.dok || []; inv = c.inv || [];
+  if (c._error) MP.toast(c._error, 'err');
+  render();
+});
+</script>
+</body>
+</html>

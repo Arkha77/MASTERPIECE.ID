@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vendor & Toko — Masterpiece.id</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="mp-shell.css">
+<script src="mp-shell.js"></script>
+<style>
+  .vd-cols{ display:grid; grid-template-columns:1fr 1fr; gap:22px; align-items:start; }
+  .vd-colhead{ display:flex; align-items:center; gap:8px; font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-soft); }
+  .vd-colhead svg{ width:15px; height:15px; stroke:currentColor; fill:none; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+  .vd-coldesc{ font-size:12px; color:var(--ink-faint); margin:6px 0 12px; line-height:1.45; }
+  .vd-item{ border-bottom:1px solid var(--line); }
+  .vd-item:last-child{ border-bottom:0; }
+  .vd-sum{ display:flex; align-items:center; gap:12px; padding:13px 16px; cursor:pointer; user-select:none; }
+  .vd-sum:hover{ background:var(--cream); }
+  .vd-ico{ width:30px; height:30px; border-radius:10px; background:var(--forest-soft); color:var(--forest); display:grid; place-items:center; flex:none; }
+  .vd-ico svg{ width:16px; height:16px; stroke:currentColor; fill:none; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+  .vd-sum .grow{ flex:1; min-width:0; }
+  .vd-sum .t{ font-weight:600; font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .vd-sum .s{ font-size:11.5px; color:var(--ink-soft); margin-top:2px; }
+  .vd-body{ display:none; padding:6px 18px 16px; background:var(--cream); border-top:1px solid var(--line); }
+  .vd-item.open .vd-body{ display:block; }
+  .vd-item.open .mp-chev{ transform:rotate(180deg); }
+  .vd-sub{ font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-faint); margin:14px 0 4px; }
+  .vd-pay{ display:flex; justify-content:space-between; gap:10px; font-size:12.5px; padding:5px 0; border-bottom:1px dashed var(--line); }
+  .vd-pay:last-child{ border-bottom:0; }
+  .vd-pay span:first-child{ color:var(--ink-soft); }
+  .vd-btns{ display:flex; gap:8px; margin-top:14px; }
+  .vd-search{ position:relative; margin-bottom:20px; }
+  .vd-search svg{ position:absolute; left:14px; top:50%; transform:translateY(-50%); width:16px; height:16px; stroke:var(--ink-faint); fill:none; stroke-width:1.8; }
+  .vd-search input{ padding-left:40px; }
+  @media (max-width:900px){ .vd-cols{ grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+<main class="mp-main"><div class="mp-wrap">
+  <div class="mp-head">
+    <div>
+      <h1 class="mp-title">Daftar Vendor &amp; Toko</h1>
+      <p class="mp-sub">Semua pihak yang dibayar perusahaan. Nomor rekening unik — tidak boleh sama dua kali.</p>
+    </div>
+    <div class="mp-actions">
+      <button class="mp-btn dark" id="addVendorBtn" type="button"><span id="icPlus1"></span> Tambah vendor</button>
+      <button class="mp-btn" id="addStoreBtn" type="button"><span id="icPlus2"></span> Tambah toko</button>
+    </div>
+  </div>
+
+  <div class="vd-search"><span id="icSearch"></span><input class="mp-input" id="searchBox" type="search" placeholder="Cari nama, kategori, kontak, atau rekening..."></div>
+
+  <div class="vd-cols">
+    <section>
+      <div class="vd-colhead"><span id="icVendor"></span> VENDOR <span class="mp-count" id="cntVendor">0</span></div>
+      <p class="vd-coldesc">Subkontraktor yang bekerja dengan kesepakatan. Hanya ini yang bisa punya kontrak vendor.</p>
+      <div class="mp-card flush" id="listVendor"><div class="mp-loading">Memuat…</div></div>
+    </section>
+    <section>
+      <div class="vd-colhead"><span id="icStore"></span> TOKO <span class="mp-count" id="cntStore">0</span></div>
+      <p class="vd-coldesc">Toko tempat membeli material langsung. Tanpa kontrak.</p>
+      <div class="mp-card flush" id="listStore"><div class="mp-loading">Memuat…</div></div>
+    </section>
+  </div>
+</div></main>
+
+<script>
+MP.ready(function () {
+  var $ = MP.$, esc = MP.esc;
+  var vendors = [], trx = [], kontrak = [];
+  var opened = {};
+  var BANKS = ['BCA', 'BRI', 'Mandiri', 'BNI', 'BSI', 'CIMB', 'Permata', 'Jago', 'SeaBank', 'Dana', 'OVO', 'GoPay'];
+
+  $('#icPlus1').innerHTML = MP.icon('plus'); $('#icPlus2').innerHTML = MP.icon('plus');
+  $('#icSearch').innerHTML = MP.icon('search');
+  $('#icVendor').innerHTML = MP.icon('kontrak'); $('#icStore').innerHTML = MP.icon('vendor');
+
+  function tipeOf(v) { return String(v.tipe || 'vendor').toLowerCase() === 'store' ? 'store' : 'vendor'; }
+  function digits(s) { return String(s || '').replace(/\D/g, ''); }
+
+  function paymentsOf(v) {
+    var n = String(v.namaVendor || '').trim().toLowerCase();
+    return trx.filter(function (t) {
+      return String(t.jenis).toLowerCase() === 'pengeluaran' && String(t.vendorTerkait || '').trim().toLowerCase() === n;
+    }).sort(function (a, b) { return String(MP.isoDate(b.tanggal)).localeCompare(MP.isoDate(a.tanggal)); });
+  }
+  function kontrakOf(v) {
+    var n = String(v.namaVendor || '').trim().toLowerCase();
+    return kontrak.filter(function (k) { return String(k.vendor || '').trim().toLowerCase() === n; });
+  }
+
+  function itemHTML(v) {
+    var pays = paymentsOf(v), ks = kontrakOf(v);
+    var total = pays.reduce(function (s, t) { return s + MP.num(t.jumlah) + MP.num(t.biayaTransfer); }, 0);
+    var hasRek = !!(v.bank || v.noRekening || v.atasNama);
+    var tipe = tipeOf(v);
+    var sub = (hasRek ? '1 rekening' : 'tanpa rekening') + ' · ' + pays.length + ' pembayaran' + (tipe === 'vendor' ? ' · ' + ks.length + ' kontrak' : '');
+    var isOpen = !!opened[v.idVendor];
+    var h = '<div class="vd-item' + (isOpen ? ' open' : '') + '" data-id="' + esc(v.idVendor) + '">' +
+      '<div class="vd-sum"><div class="vd-ico">' + MP.icon(tipe === 'store' ? 'vendor' : 'kontrak') + '</div>' +
+      '<div class="grow"><div class="t">' + esc(v.namaVendor || 'Tanpa nama') + '</div><div class="s">' + esc(sub) + '</div></div>' +
+      MP.icon('chev', 'mp-chev') + '</div>' +
+      '<div class="vd-body">';
+    h += '<div class="mp-kv"><span>Kategori</span><b>' + esc(v.kategori || '—') + '</b></div>' +
+      '<div class="mp-kv"><span>Kontak</span><b>' + esc(v.kontak || '—') + '</b></div>' +
+      '<div class="mp-kv"><span>Alamat</span><b style="text-align:right">' + esc(v.alamat || '—') + '</b></div>' +
+      '<div class="mp-kv"><span>Rekening</span><b style="text-align:right">' + (hasRek ? esc([v.bank, v.noRekening].filter(Boolean).join(' · ') + (v.atasNama ? ' · a.n. ' + v.atasNama : '')) : '—') + '</b></div>' +
+      '<div class="mp-kv"><span>Total belanja</span><b>' + MP.rupiah(total) + '</b></div>';
+    if (v.keterangan) h += '<div class="mp-kv"><span>Catatan</span><b style="text-align:right">' + esc(v.keterangan) + '</b></div>';
+    h += '<div class="vd-sub">Pembayaran terakhir</div>';
+    if (!pays.length) h += '<div class="mp-hint">Belum ada pembayaran tercatat.</div>';
+    pays.slice(0, 5).forEach(function (t) {
+      h += '<div class="vd-pay"><span>' + MP.fmtDate(t.tanggal) + ' · ' + esc(t.keterangan || t.kategori || '') + '</span><b>' + MP.rupiah(MP.num(t.jumlah) + MP.num(t.biayaTransfer)) + '</b></div>';
+    });
+    if (tipe === 'vendor') {
+      h += '<div class="vd-sub">Kontrak</div>';
+      if (!ks.length) h += '<div class="mp-hint">Belum ada kontrak. <a href="vendor-projects.html" style="color:var(--forest);font-weight:600">Buat di Proyek Vendor</a></div>';
+      ks.forEach(function (k) {
+        h += '<div class="vd-pay"><span><a href="vendor-projects.html" style="color:inherit">' + esc(k.judul || '—') + '</a> · ' + esc(k.proyekKode || '') + '</span><span class="mp-pill ' + (String(k.status).toLowerCase() === 'done' ? 'gray' : 'green') + '">' + esc(String(k.status || 'open').toUpperCase()) + '</span></div>';
+      });
+    }
+    h += '<div class="vd-btns"><button type="button" class="mp-btn sm" data-edit="' + esc(v.idVendor) + '">' + MP.icon('edit') + ' Edit</button>' +
+      '<button type="button" class="mp-btn sm" data-del="' + esc(v.idVendor) + '" style="color:var(--rust)">' + MP.icon('trash') + ' Hapus</button></div>';
+    return h + '</div></div>';
+  }
+
+  function render() {
+    var q = $('#searchBox').value.trim().toLowerCase();
+    var f = vendors.filter(function (v) { return !q || Object.keys(v).map(function (k) { return v[k]; }).join(' ').toLowerCase().indexOf(q) !== -1; });
+    ['vendor', 'store'].forEach(function (tp) {
+      var arr = f.filter(function (v) { return tipeOf(v) === tp; }).sort(function (a, b) { return String(a.namaVendor).localeCompare(String(b.namaVendor)); });
+      var box = tp === 'vendor' ? $('#listVendor') : $('#listStore');
+      $(tp === 'vendor' ? '#cntVendor' : '#cntStore').textContent = vendors.filter(function (v) { return tipeOf(v) === tp; }).length;
+      box.innerHTML = arr.length ? arr.map(itemHTML).join('') : '<div class="mp-empty">' + (q ? 'Tidak ada yang cocok.' : (tp === 'vendor' ? 'Belum ada vendor.' : 'Belum ada toko.')) + '</div>';
+    });
+  }
+
+  async function load() {
+    var d = await MP.loadAll({ v: 'getVendor', t: 'getTransaksi', k: 'getKontrakVendor' });
+    vendors = d.v; trx = d.t; kontrak = d.k;
+    if (d._error) MP.toast(d._error, 'err');
+    render();
+  }
+
+  document.addEventListener('click', function (e) {
+    var sum = e.target.closest('.vd-sum');
+    if (sum) { var it = sum.parentNode; it.classList.toggle('open'); opened[it.dataset.id] = it.classList.contains('open'); return; }
+    var ed = e.target.closest('[data-edit]'); if (ed) return openForm(vendors.filter(function (v) { return String(v.idVendor) === ed.dataset.edit; })[0]);
+    var dl = e.target.closest('[data-del]'); if (dl) return remove(dl.dataset.del);
+  });
+  $('#searchBox').addEventListener('input', MP.debounce(render, 120));
+  $('#addVendorBtn').addEventListener('click', function () { openForm(null, 'vendor'); });
+  $('#addStoreBtn').addEventListener('click', function () { openForm(null, 'store'); });
+
+  function openForm(v, tipe) {
+    var edit = !!v; v = v || {}; tipe = edit ? tipeOf(v) : tipe;
+    var body = '<div class="mp-row2"><div class="mp-field"><label class="mp-label">Jenis</label><select class="mp-select" name="tipe"><option value="vendor"' + (tipe === 'vendor' ? ' selected' : '') + '>Vendor (subkontraktor)</option><option value="store"' + (tipe === 'store' ? ' selected' : '') + '>Toko (beli langsung)</option></select></div>' +
+      '<div class="mp-field"><label class="mp-label">Kategori</label><input class="mp-input" name="kategori" placeholder="Tukang, Material, Listrik…" value="' + esc(v.kategori || '') + '"></div></div>' +
+      '<div class="mp-field"><label class="mp-label">Nama</label><input class="mp-input" name="namaVendor" required value="' + esc(v.namaVendor || '') + '"></div>' +
+      '<div class="mp-row2"><div class="mp-field"><label class="mp-label">Kontak / WhatsApp</label><input class="mp-input" name="kontak" value="' + esc(v.kontak || '') + '"></div>' +
+      '<div class="mp-field"><label class="mp-label">Alamat</label><input class="mp-input" name="alamat" value="' + esc(v.alamat || '') + '"></div></div>' +
+      '<div class="mp-sec" style="margin:8px 0 12px">Rekening</div>' +
+      '<div class="mp-row2"><div class="mp-field"><label class="mp-label">Bank</label><input class="mp-input" name="bank" list="bankList" value="' + esc(v.bank || '') + '"><datalist id="bankList">' + BANKS.map(function (b) { return '<option value="' + b + '">'; }).join('') + '</datalist></div>' +
+      '<div class="mp-field"><label class="mp-label">No. rekening</label><input class="mp-input" name="noRekening" inputmode="numeric" value="' + esc(v.noRekening || '') + '"></div></div>' +
+      '<div class="mp-field"><label class="mp-label">Atas nama</label><input class="mp-input" name="atasNama" value="' + esc(v.atasNama || '') + '"><p class="mp-hint">Nomor rekening harus unik — satu nomor hanya boleh dimiliki satu vendor/toko.</p></div>' +
+      '<div class="mp-field"><label class="mp-label">Keterangan</label><input class="mp-input" name="keterangan" value="' + esc(v.keterangan || '') + '"></div>';
+    MP.modal({
+      title: (edit ? 'Edit ' : 'Tambah ') + (tipe === 'store' ? 'toko' : 'vendor'), body: body, wide: true,
+      onSubmit: async function (f) {
+        var p = {};
+        ['tipe', 'namaVendor', 'kategori', 'kontak', 'alamat', 'bank', 'noRekening', 'atasNama', 'keterangan'].forEach(function (k) { p[k] = f[k].value.trim(); });
+        if (!p.namaVendor) { MP.toast('Nama wajib diisi', 'err'); return false; }
+        var d = digits(p.noRekening);
+        if (d && vendors.some(function (x) { return String(x.idVendor) !== String(v.idVendor) && digits(x.noRekening) === d; })) {
+          MP.toast('Nomor rekening ini sudah terdaftar di vendor/toko lain.', 'err'); return false;
+        }
+        if (edit) p.idVendor = v.idVendor;
+        var r = await MP.post(edit ? 'updateVendor' : 'addVendor', p);
+        if (!r.success) { MP.toast(r.message || 'Gagal menyimpan', 'err'); return false; }
+        MP.toast('Tersimpan', 'ok'); load();
+      }
+    });
+  }
+
+  async function remove(id) {
+    var v = vendors.filter(function (x) { return String(x.idVendor) === id; })[0]; if (!v) return;
+    var hasK = kontrakOf(v).length > 0;
+    var ok = await MP.confirm(hasK ? '"' + v.namaVendor + '" punya kontrak vendor. Tetap hapus dari daftar? (kontrak & pembayaran tidak ikut terhapus)' : 'Hapus "' + v.namaVendor + '" dari daftar?');
+    if (!ok) return;
+    var r = await MP.post('deleteVendor', { idVendor: id });
+    if (!r.success) return MP.toast(r.message || 'Gagal menghapus', 'err');
+    MP.toast('Dihapus', 'ok'); load();
+  }
+
+  load();
+});
+</script>
+</body>
+</html>

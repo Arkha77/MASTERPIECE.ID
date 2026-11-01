@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Termin Pembayaran — Masterpiece.id</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="mp-shell.css">
+<script src="mp-shell.js"></script>
+<style>
+  .tm-cards{ display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:6px; }
+  .tm-stat{ padding:16px 18px; }
+  .tm-stat .l{ font-size:11.5px; color:var(--ink-soft); font-weight:600; letter-spacing:.04em; }
+  .tm-stat .v{ font-size:21px; font-weight:700; margin-top:6px; letter-spacing:-.01em; }
+  .tm-stat .n{ font-size:11.5px; color:var(--ink-faint); margin-top:4px; }
+  .tm-bar{ display:flex; gap:12px; flex-wrap:wrap; align-items:center; margin:18px 0 14px; }
+  .tm-bar .grow{ flex:1; min-width:200px; position:relative; }
+  .tm-bar .grow svg{ position:absolute; left:14px; top:50%; transform:translateY(-50%); width:16px; height:16px; stroke:var(--ink-faint); fill:none; stroke-width:1.8; }
+  .tm-bar .grow input{ padding-left:40px; }
+  .tm-f{ display:flex; gap:6px; flex-wrap:wrap; }
+  .tm-f button{ font:600 12.5px Inter,sans-serif; border:1px solid var(--line); background:var(--paper); color:var(--ink-soft); border-radius:999px; padding:7px 14px; cursor:pointer; }
+  .tm-f button.on{ background:var(--forest-soft); color:var(--forest); border-color:transparent; }
+  .tm-proj{ margin-bottom:12px; overflow:hidden; }
+  .tm-sum{ display:grid; grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) 28px; gap:18px; align-items:center; padding:16px 20px; cursor:pointer; user-select:none; }
+  .tm-sum:hover{ background:var(--cream); }
+  .tm-code{ font:700 10.5px Inter,sans-serif; letter-spacing:.08em; color:var(--ink-faint); }
+  .tm-name{ font-weight:700; font-size:15px; margin-top:2px; }
+  .tm-cl{ font-size:12px; color:var(--ink-soft); margin-top:2px; }
+  .tm-prog .t{ display:flex; justify-content:space-between; font-size:12px; color:var(--ink-soft); margin-bottom:6px; gap:8px; }
+  .tm-prog .t b{ color:var(--ink); }
+  .tm-body{ display:none; border-top:1px solid var(--line); background:var(--cream); padding:6px 0 14px; }
+  .tm-proj.open .tm-body{ display:block; }
+  .tm-proj.open .mp-chev{ transform:rotate(180deg); }
+  .tm-row{ display:grid; grid-template-columns:34px minmax(0,1.5fr) 150px 140px 120px 340px; gap:10px; align-items:center; padding:12px 20px; border-bottom:1px solid var(--line); font-size:13px; background:var(--paper); }
+  .tm-row.h{ background:transparent; font:700 10.5px Inter,sans-serif; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-faint); border-bottom:0; padding-bottom:4px; }
+  .tm-row .no{ width:26px; height:26px; border-radius:50%; background:var(--cream); border:1px solid var(--line); display:grid; place-items:center; font-weight:700; font-size:12px; }
+  .tm-row .nm{ font-weight:600; } .tm-row .sub{ font-size:11.5px; color:var(--ink-soft); margin-top:2px; }
+  .tm-row .n{ font-weight:700; font-variant-numeric:tabular-nums; }
+  .tm-row .late{ color:var(--rust); font-weight:600; }
+  .tm-act{ display:flex; gap:6px; flex-wrap:nowrap; justify-content:flex-end; }
+  .tm-foot{ display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; padding:12px 20px 0; font-size:12.5px; }
+  .tm-warn{ color:var(--amber); font-weight:600; }
+  .tm-ok{ color:var(--forest); font-weight:600; }
+  .tm-plan{ display:grid; grid-template-columns:minmax(0,1.2fr) 70px minmax(0,1.3fr) minmax(0,1.1fr) 30px; gap:8px; align-items:center; margin-bottom:8px; }
+  .tm-plan.h{ font:700 10.5px Inter,sans-serif; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-faint); margin-bottom:4px; }
+  .tm-plan input{ min-width:0; }
+  .tm-plan button.x{ border:0; background:none; color:var(--ink-faint); cursor:pointer; }
+  .tm-plan button.x:hover{ color:var(--rust); }
+  .tm-tpl{ display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px; }
+  .tm-tpl button{ font:600 12px Inter,sans-serif; border:1px solid var(--line); background:var(--cream); border-radius:999px; padding:6px 12px; cursor:pointer; color:var(--ink-soft); }
+  .tm-tpl button.on{ background:var(--forest-soft); color:var(--forest); border-color:var(--forest); }
+  .tm-empty-proj{ display:flex; justify-content:space-between; align-items:center; gap:12px; padding:13px 20px; border-bottom:1px solid var(--line); font-size:13.5px; }
+  .tm-empty-proj:last-child{ border-bottom:0; }
+  @media (max-width:1180px){ .tm-act{ flex-wrap:wrap; } }
+  @media (max-width:980px){
+    .tm-cards{ grid-template-columns:1fr 1fr; }
+    .tm-sum{ grid-template-columns:1fr 28px; } .tm-prog{ grid-column:1/-1; order:3; }
+    .tm-row{ grid-template-columns:34px 1fr; gap:6px 12px; } .tm-row.h{ display:none; }
+    .tm-row > :nth-child(n+3){ grid-column:2; } .tm-act{ justify-content:flex-start; }
+    .tm-plan{ grid-template-columns:1fr 1fr; } .tm-plan.h{ display:none; }
+  }
+  @media (max-width:560px){ .tm-cards{ grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+<main class="mp-main"><div class="mp-wrap" style="max-width:1180px">
+  <div class="mp-head">
+    <div>
+      <h1 class="mp-title">Termin Pembayaran</h1>
+      <p class="mp-sub">Jadwal pembayaran klien per proyek. Invoice termin yang ditandai lunas otomatis menambah dana masuk proyek.</p>
+    </div>
+    <div class="mp-actions"><button class="mp-btn dark" id="addBtn" type="button"></button></div>
+  </div>
+
+  <div class="tm-cards" id="cards"></div>
+
+  <div class="tm-bar">
+    <div class="grow"><span id="icS"></span><input class="mp-input" id="q" placeholder="Cari proyek, kode, atau klien…"></div>
+    <div class="tm-f" id="flt">
+      <button type="button" data-f="all" class="on">Semua</button>
+      <button type="button" data-f="late">Terlambat</button>
+      <button type="button" data-f="open">Berjalan</button>
+      <button type="button" data-f="done">Lunas semua</button>
+    </div>
+  </div>
+
+  <div id="list"><div class="mp-loading">Memuat…</div></div>
+  <div id="noPlan"></div>
+</div></main>
+
+<script>
+MP.ready(async function () {
+  var $ = MP.$, esc = MP.esc;
+  var proyek = [], termin = [], klien = [], filter = 'all', openIds = {};
+  $('#addBtn').innerHTML = MP.icon('plus') + ' Buat jadwal termin';
+  $('#icS').innerHTML = MP.icon('search');
+
+  var today = MP.today();
+  function iso(v) { return MP.isoDate(v) || ''; }
+  function projKey(x) { return String(x.kodeProyek || x.proyekKode || x.namaProyek || x.proyekNama || '').trim().toLowerCase(); }
+  function nilaiProyek(p) { return MP.num(p.nilaiKontrak) || MP.num(p.totalBiaya); }
+  function daysLate(t) { var d = iso(t.jatuhTempo); if (!d || t.status === 'lunas') return 0; var a = new Date(today + 'T00:00:00'), b = new Date(d + 'T00:00:00'); return Math.round((a - b) / 86400000); }
+  function stOf(t) {
+    if (t.status === 'lunas') return { k: 'lunas', label: 'Lunas', cls: 'green' };
+    if (daysLate(t) > 0) return { k: 'late', label: 'Terlambat', cls: 'rust' };
+    if (t.status === 'ditagih') return { k: 'ditagih', label: 'Ditagih', cls: 'amber' };
+    return { k: 'belum', label: 'Belum ditagih', cls: 'gray' };
+  }
+  function groups() {
+    var map = {};
+    proyek.forEach(function (p) { map[projKey(p)] = { p: p, items: [] }; });
+    termin.forEach(function (t) {
+      var k = projKey(t); if (!map[k]) map[k] = { p: { kodeProyek: t.proyekKode, namaProyek: t.proyekNama, klienKode: t.klienKode, klien: t.klienNama, idProyek: 'x-' + k }, items: [] };
+      map[k].items.push(t);
+    });
+    Object.keys(map).forEach(function (k) { map[k].items.sort(function (a, b) { return MP.num(a.urutan) - MP.num(b.urutan); }); });
+    return Object.keys(map).map(function (k) { return map[k]; });
+  }
+  function klienName(p) {
+    var k = klien.filter(function (x) { return p.klienKode && String(x.kodeKlien).toUpperCase() === String(p.klienKode).toUpperCase(); })[0];
+    return k ? k.namaKlien : (p.klien || p.klienNama || '');
+  }
+  function sum(items, fn) { return items.reduce(function (s, t) { return s + (fn(t) ? MP.num(t.nominal) : 0); }, 0); }
+
+  function renderCards(gs) {
+    var all = termin, sched = sum(all, function () { return true; }), paid = sum(all, function (t) { return t.status === 'lunas'; });
+    var waiting = sum(all, function (t) { return t.status !== 'lunas'; });
+    var lateItems = all.filter(function (t) { return daysLate(t) > 0; }), lateSum = lateItems.reduce(function (s, t) { return s + MP.num(t.nominal); }, 0);
+    function c(l, v, n, cls) { return '<div class="mp-card tm-stat"><div class="l">' + l + '</div><div class="v ' + (cls || '') + '">' + v + '</div><div class="n">' + n + '</div></div>'; }
+    $('#cards').innerHTML =
+      c('Total terjadwal', MP.rupiah(sched), all.length + ' termin di ' + gs.filter(function (g) { return g.items.length; }).length + ' proyek') +
+      c('Sudah terbayar', MP.rupiah(paid), sched ? Math.round(paid / sched * 100) + '% dari jadwal' : '—') +
+      c('Menunggu pembayaran', MP.rupiah(waiting), all.filter(function (t) { return t.status !== 'lunas'; }).length + ' termin belum lunas') +
+      c('Terlambat', MP.rupiah(lateSum), lateItems.length ? lateItems.length + ' termin lewat jatuh tempo' : 'Tidak ada', lateItems.length ? 'tm-late' : '');
+    var lc = $('.tm-late'); if (lc) lc.style.color = 'var(--rust)';
+  }
+
+  function rowHTML(t, i) {
+    var st = stOf(t), dl = daysLate(t);
+    var due = iso(t.jatuhTempo);
+    var dueTxt = due ? MP.fmtDate(due) + (dl > 0 ? '<div class="late">Terlambat ' + dl + ' hari</div>' : '') : '<span style="color:var(--ink-faint)">—</span>';
+    var sub = [t.persen ? MP.num(t.persen) + '%' : '', t.invoiceNo ? 'Invoice ' + t.invoiceNo : '', t.status === 'lunas' && t.tanggalLunas ? 'Dibayar ' + MP.fmtDate(t.tanggalLunas) : ''].filter(Boolean).join(' · ');
+    var acts = '';
+    if (t.status === 'lunas') {
+      acts = '<a class="mp-btn sm" href="kwitansi.html?termin=' + encodeURIComponent(t.idTermin) + '">Kwitansi</a><button type="button" class="mp-btn sm" data-a="batal" data-id="' + esc(t.idTermin) + '">Batal lunas</button>';
+    } else {
+      acts = '<a class="mp-btn sm" href="invoice.html?termin=' + encodeURIComponent(t.idTermin) + '">' + (t.invoiceNo ? 'Invoice baru' : 'Buat invoice') + '</a>' +
+        '<button type="button" class="mp-btn sm green" data-a="lunas" data-id="' + esc(t.idTermin) + '">Tandai lunas</button>' +
+        '<button type="button" class="mp-btn sm" data-a="edit" data-id="' + esc(t.idTermin) + '">Edit</button>' +
+        '<button type="button" class="mp-btn sm" style="color:var(--rust)" data-a="del" data-id="' + esc(t.idTermin) + '" aria-label="Hapus termin">' + MP.icon('trash') + '</button>';
+    }
+    return '<div class="tm-row"><span class="no">' + (i + 1) + '</span><div><div class="nm">' + esc(t.nama) + '</div><div class="sub">' + esc(sub) + '</div></div>' +
+      '<div>' + dueTxt + '</div><div class="n">' + MP.rupiah(MP.num(t.nominal)) + '</div><div><span class="mp-pill ' + st.cls + '">' + st.label + '</span></div><div class="tm-act">' + acts + '</div></div>';
+  }
+  function projHTML(g) {
+    var p = g.p, items = g.items, nilai = nilaiProyek(p) || sum(items, function () { return true; });
+    var paid = sum(items, function (t) { return t.status === 'lunas'; }), total = sum(items, function () { return true; });
+    var lunasN = items.filter(function (t) { return t.status === 'lunas'; }).length;
+    var pct = nilai > 0 ? Math.min(100, Math.round(paid / nilai * 100)) : 0;
+    var late = items.some(function (t) { return daysLate(t) > 0; });
+    var next = items.filter(function (t) { return t.status !== 'lunas'; })[0];
+    var diff = nilaiProyek(p) ? total - nilaiProyek(p) : 0;
+    var isOpen = !!openIds[p.idProyek];
+    return '<div class="mp-card flush tm-proj' + (isOpen ? ' open' : '') + '" data-pid="' + esc(p.idProyek) + '">' +
+      '<div class="tm-sum"><div><div class="tm-code">' + esc(p.kodeProyek || 'TANPA KODE') + '</div><div class="tm-name">' + esc(p.namaProyek) + '</div><div class="tm-cl">' + esc(klienName(p) || '—') + '</div></div>' +
+      '<div class="tm-prog"><div class="t"><span>' + lunasN + '/' + items.length + ' termin lunas' + (late ? ' · <b style="color:var(--rust)">ada yang terlambat</b>' : (next && iso(next.jatuhTempo) ? ' · berikutnya ' + MP.fmtDate(iso(next.jatuhTempo)) : '')) + '</span><b>' + pct + '%</b></div>' +
+      '<div class="mp-progress ' + (late ? 'over' : '') + '"><i style="width:' + pct + '%"></i></div>' +
+      '<div class="t" style="margin:6px 0 0"><span>Terbayar ' + MP.rupiah(paid) + '</span><span>dari ' + MP.rupiah(nilai) + '</span></div></div>' +
+      '<span class="mp-chev">' + MP.icon('chev') + '</span></div>' +
+      '<div class="tm-body"><div class="tm-row h"><span></span><span>Termin</span><span>Jatuh tempo</span><span>Nominal</span><span>Status</span><span></span></div>' +
+      items.map(rowHTML).join('') +
+      '<div class="tm-foot"><span class="' + (diff ? 'tm-warn' : 'tm-ok') + '">' + (diff ? 'Total termin ' + MP.rupiah(total) + ' ' + (diff > 0 ? 'lebih ' : 'kurang ') + MP.rupiah(Math.abs(diff)) + ' dari nilai proyek' : 'Total termin sama dengan nilai proyek ✓') + '</span>' +
+      '<button type="button" class="mp-btn sm" data-a="add" data-pid="' + esc(p.idProyek) + '">' + MP.icon('plus') + ' Tambah termin</button></div></div></div>';
+  }
+
+  function render() {
+    var q = $('#q').value.trim().toLowerCase();
+    var gs = groups();
+    renderCards(gs);
+    var withPlan = gs.filter(function (g) { return g.items.length; });
+    var shown = withPlan.filter(function (g) {
+      if (q && [g.p.kodeProyek, g.p.namaProyek, klienName(g.p)].join(' ').toLowerCase().indexOf(q) === -1) return false;
+      var late = g.items.some(function (t) { return daysLate(t) > 0; }), done = g.items.every(function (t) { return t.status === 'lunas'; });
+      if (filter === 'late') return late;
+      if (filter === 'done') return done;
+      if (filter === 'open') return !done;
+      return true;
+    });
+    $('#list').innerHTML = shown.length ? shown.map(projHTML).join('') :
+      '<div class="mp-card"><div class="mp-empty">' + (withPlan.length ? 'Tidak ada proyek yang cocok dengan filter.' : 'Belum ada jadwal termin. Klik "Buat jadwal termin" untuk memulai.') + '</div></div>';
+    var noPlan = gs.filter(function (g) { return !g.items.length && g.p.status !== 'done' && g.p.status !== 'selesai'; }).filter(function (g) { return !q || [g.p.kodeProyek, g.p.namaProyek].join(' ').toLowerCase().indexOf(q) !== -1; });
+    $('#noPlan').innerHTML = noPlan.length && filter === 'all' ?
+      '<div class="mp-sec">Proyek tanpa jadwal termin <span class="mp-count">' + noPlan.length + '</span></div><div class="mp-card flush">' +
+      noPlan.map(function (g) { return '<div class="tm-empty-proj"><div><b>' + esc(MP.projectLabel(g.p)) + '</b><span style="color:var(--ink-soft)"> · ' + esc(klienName(g.p) || '—') + ' · ' + MP.rupiah(nilaiProyek(g.p)) + '</span></div><button type="button" class="mp-btn sm" data-a="plan" data-pid="' + esc(g.p.idProyek) + '">Buat jadwal</button></div>'; }).join('') + '</div>' : '';
+  }
+
+  /* ---------- modal: buat jadwal ---------- */
+  var TPL = {
+    '50-50': { label: '50% · 50%', rows: [['DP', 50], ['Pelunasan', 50]] },
+    '30-40-30': { label: '30% · 40% · 30%', rows: [['DP', 30], ['Termin 2', 40], ['Pelunasan', 30]] },
+    '40-30-30': { label: '40% · 30% · 30%', rows: [['DP', 40], ['Termin 2', 30], ['Pelunasan', 30]] },
+    '40-3x20': { label: '40% · 20% · 20% · 20%', rows: [['DP', 40], ['Termin 2', 20], ['Termin 3', 20], ['Pelunasan', 20]] },
+    'custom': { label: 'Kustom', rows: [['DP', 0], ['Pelunasan', 0]] }
+  };
+  function planModal(pid) {
+    var cands = proyek.filter(function (p) { return !termin.some(function (t) { return projKey(t) === projKey(p); }); });
+    if (!cands.length) { MP.toast('Semua proyek sudah punya jadwal termin. Gunakan "Tambah termin" untuk menambah.', 'err'); return; }
+    var sel = pid ? (cands.filter(function (p) { return String(p.idProyek) === String(pid); })[0] || cands[0]) : cands[0];
+    var rows = [], base = nilaiProyek(sel);
+    var body = '<div class="mp-field"><label class="mp-label">Proyek</label><select class="mp-select" name="proyek" id="plProj">' + cands.map(function (p) { return '<option value="' + esc(p.idProyek) + '"' + (p === sel ? ' selected' : '') + '>' + esc(MP.projectLabel(p)) + '</option>'; }).join('') + '</select></div>' +
+      '<div class="mp-field"><label class="mp-label">Nilai proyek (dasar perhitungan)</label><div class="mp-money"><span>Rp</span><input class="mp-input" name="base" id="plBase"></div></div>' +
+      '<label class="mp-label">Pola termin</label><div class="tm-tpl" id="plTpl">' + Object.keys(TPL).map(function (k) { return '<button type="button" data-k="' + k + '"' + (k === '50-50' ? ' class="on"' : '') + '>' + TPL[k].label + '</button>'; }).join('') + '</div>' +
+      '<div class="tm-plan h"><span>Nama</span><span>%</span><span>Nominal</span><span>Jatuh tempo</span><span></span></div><div id="plRows"></div>' +
+      '<button type="button" class="mp-btn sm" id="plAdd">' + MP.icon('plus') + ' Tambah baris</button><p class="mp-hint" id="plSum" style="margin-top:10px"></p>';
+    var m = MP.modal({
+      title: 'Buat jadwal termin', body: body, wide: true, okText: 'Simpan jadwal',
+      onSubmit: async function () {
+        var p = cands.filter(function (x) { return String(x.idProyek) === $('#plProj', m.el).value; })[0];
+        var items = rows.filter(function (r) { return r.nominal > 0; }).map(function (r) { return { nama: r.nama.trim() || 'Termin', persen: r.persen, nominal: r.nominal, jatuhTempo: r.due }; });
+        if (!items.length) { MP.toast('Isi minimal satu termin dengan nominal', 'err'); return false; }
+        var r = await MP.post('addTerminBatch', { proyekKode: p.kodeProyek || '', proyekNama: p.namaProyek, klienKode: p.klienKode || '', klienNama: klienName(p), items: items });
+        if (!r.success) { MP.toast(r.message || 'Gagal menyimpan', 'err'); return false; }
+        openIds[p.idProyek] = true; MP.toast('Jadwal termin dibuat', 'ok'); await load();
+      }
+    });
+    var baseEl = $('#plBase', m.el); MP.moneyInput(baseEl); MP.setMoney(baseEl, base);
+    function applyTpl(k) {
+      var b = MP.moneyVal(baseEl);
+      rows = TPL[k].rows.map(function (r) { return { nama: r[0], persen: r[1], nominal: Math.round(b * r[1] / 100), due: '' }; });
+      fixRemainder(); draw();
+    }
+    function fixRemainder() {
+      var b = MP.moneyVal(baseEl); if (!b || !rows.length) return;
+      var pctSum = rows.reduce(function (s, r) { return s + r.persen; }, 0);
+      if (pctSum === 100) { var rest = b - rows.slice(0, -1).reduce(function (s, r) { return s + r.nominal; }, 0); rows[rows.length - 1].nominal = rest; }
+    }
+    function totals() {
+      var b = MP.moneyVal(baseEl), tn = rows.reduce(function (s, r) { return s + r.nominal; }, 0), tp = rows.reduce(function (s, r) { return s + r.persen; }, 0);
+      var el = $('#plSum', m.el), diff = b - tn;
+      el.innerHTML = 'Total ' + MP.rupiah(tn) + ' (' + Math.round(tp * 100) / 100 + '%) · ' + (diff === 0 ? '<b style="color:var(--forest)">pas dengan nilai proyek ✓</b>' : '<b style="color:var(--amber)">' + (diff > 0 ? 'kurang ' : 'lebih ') + MP.rupiah(Math.abs(diff)) + ' dari nilai proyek</b>');
+    }
+    function draw() {
+      $('#plRows', m.el).innerHTML = rows.map(function (r, i) {
+        return '<div class="tm-plan" data-i="' + i + '"><input class="mp-input" data-f="nama" value="' + esc(r.nama) + '" placeholder="Nama termin">' +
+          '<input class="mp-input" data-f="persen" inputmode="decimal" value="' + (r.persen || '') + '" placeholder="%">' +
+          '<div class="mp-money"><span>Rp</span><input class="mp-input" data-f="nominal" placeholder="0"></div>' +
+          '<input class="mp-input" type="date" data-f="due" value="' + esc(r.due) + '">' +
+          '<button type="button" class="x" data-rm aria-label="Hapus baris">' + MP.icon('x') + '</button></div>';
+      }).join('');
+      MP.$$('#plRows [data-f=nominal]', m.el).forEach(function (el, i) { MP.moneyInput(el); MP.setMoney(el, rows[i].nominal); });
+      totals();
+    }
+    $('#plRows', m.el).addEventListener('input', function (e) {
+      var row = e.target.closest('.tm-plan'); if (!row) return; var r = rows[Number(row.dataset.i)], f = e.target.dataset.f, b = MP.moneyVal(baseEl);
+      if (f === 'nama') r.nama = e.target.value;
+      else if (f === 'due') r.due = e.target.value;
+      else if (f === 'persen') { r.persen = parseFloat(String(e.target.value).replace(',', '.')) || 0; r.nominal = Math.round(b * r.persen / 100); MP.setMoney($('[data-f=nominal]', row), r.nominal); }
+      else if (f === 'nominal') { r.nominal = MP.moneyVal(e.target); r.persen = b ? Math.round(r.nominal / b * 10000) / 100 : 0; $('[data-f=persen]', row).value = r.persen || ''; }
+      totals();
+    });
+    $('#plRows', m.el).addEventListener('click', function (e) { var rm = e.target.closest('[data-rm]'); if (!rm) return; rows.splice(Number(rm.closest('.tm-plan').dataset.i), 1); draw(); });
+    $('#plAdd', m.el).addEventListener('click', function () { rows.push({ nama: 'Termin ' + (rows.length + 1), persen: 0, nominal: 0, due: '' }); draw(); });
+    $('#plTpl', m.el).addEventListener('click', function (e) { var b = e.target.closest('button[data-k]'); if (!b) return; MP.$$('#plTpl button', m.el).forEach(function (x) { x.classList.toggle('on', x === b); }); applyTpl(b.dataset.k); });
+    baseEl.addEventListener('input', function () { var on = $('#plTpl .on', m.el); rows.forEach(function (r) { r.nominal = Math.round(MP.moneyVal(baseEl) * r.persen / 100); }); fixRemainder(); draw(); });
+    $('#plProj', m.el).addEventListener('change', function () { var p = cands.filter(function (x) { return String(x.idProyek) === this.value; }, this)[0]; MP.setMoney(baseEl, nilaiProyek(p)); var on = $('#plTpl .on', m.el); applyTpl(on ? on.dataset.k : '50-50'); });
+    applyTpl('50-50');
+  }
+
+  /* ---------- modal: tambah/edit satu termin ---------- */
+  function oneModal(t, g) {
+    var edit = !!t;
+    var body = '<div class="mp-field"><label class="mp-label">Nama termin</label><input class="mp-input" name="nama" value="' + esc(edit ? t.nama : 'Termin ' + (g.items.length + 1)) + '"></div>' +
+      '<div class="mp-row2"><div class="mp-field"><label class="mp-label">Persen (%)</label><input class="mp-input" name="persen" inputmode="decimal" value="' + (edit && t.persen ? MP.num(t.persen) : '') + '"></div>' +
+      '<div class="mp-field"><label class="mp-label">Nominal</label><div class="mp-money"><span>Rp</span><input class="mp-input" name="nominal" id="oNom"></div></div></div>' +
+      '<div class="mp-field"><label class="mp-label">Jatuh tempo</label><input class="mp-input" type="date" name="due" value="' + esc(edit ? iso(t.jatuhTempo) : '') + '"></div>' +
+      '<div class="mp-field"><label class="mp-label">Catatan</label><input class="mp-input" name="catatan" value="' + esc(edit ? t.catatan || '' : '') + '"></div>';
+    var m = MP.modal({
+      title: edit ? 'Edit termin' : 'Tambah termin', body: body, okText: 'Simpan',
+      onSubmit: async function (f) {
+        var nominal = MP.moneyVal(f.nominal);
+        if (!f.nama.value.trim()) { MP.toast('Nama termin wajib diisi', 'err'); return false; }
+        if (nominal <= 0) { MP.toast('Nominal harus lebih dari 0', 'err'); return false; }
+        var p = { nama: f.nama.value.trim(), persen: parseFloat(String(f.persen.value).replace(',', '.')) || 0, nominal: nominal, jatuhTempo: f.due.value, catatan: f.catatan.value.trim() };
+        var r;
+        if (edit) { p.idTermin = t.idTermin; r = await MP.post('updateTermin', p); }
+        else { p.proyekKode = g.p.kodeProyek || ''; p.proyekNama = g.p.namaProyek; p.klienKode = g.p.klienKode || ''; p.klienNama = klienName(g.p); p.urutan = g.items.length + 1; r = await MP.post('addTermin', p); }
+        if (!r.success) { MP.toast(r.message || 'Gagal menyimpan', 'err'); return false; }
+        openIds[g.p.idProyek] = true; MP.toast('Termin tersimpan', 'ok'); await load();
+      }
+    });
+    var nom = $('#oNom', m.el); MP.moneyInput(nom); if (edit) MP.setMoney(nom, MP.num(t.nominal));
+    var pers = m.el.querySelector('[name=persen]'), base = nilaiProyek(g.p);
+    if (base) {
+      pers.addEventListener('input', function () { MP.setMoney(nom, Math.round(base * (parseFloat(String(pers.value).replace(',', '.')) || 0) / 100)); });
+      nom.addEventListener('input', function () { var v = MP.moneyVal(nom); pers.value = v ? Math.round(v / base * 10000) / 100 : ''; });
+    }
+  }
+
+  function lunasModal(t, g) {
+    var body = '<p style="margin:0 0 12px;font-size:13.5px">Termin <b>' + esc(t.nama) + '</b> sebesar <b>' + MP.rupiah(MP.num(t.nominal)) + '</b> akan dicatat sebagai dana masuk ke proyek <b>' + esc(g.p.namaProyek) + '</b>' + (t.invoiceNo ? ' dan invoice ' + esc(t.invoiceNo) + ' ditandai lunas' : '') + '.</p>' +
+      '<div class="mp-row2"><div class="mp-field"><label class="mp-label">Tanggal dibayar</label><input class="mp-input" type="date" name="tgl" value="' + today + '"></div>' +
+      '<div class="mp-field"><label class="mp-label">Metode</label><select class="mp-select" name="metode"><option>Transfer Bank</option><option>Cash</option><option>QRIS</option><option>Cek / Giro</option></select></div></div>';
+    MP.modal({
+      title: 'Tandai lunas', body: body, okText: 'Ya, tandai lunas',
+      onSubmit: async function (f) {
+        var r = await MP.post('lunasiTermin', { idTermin: t.idTermin, tanggal: f.tgl.value, metode: f.metode.value });
+        if (!r.success) { MP.toast(r.message || 'Gagal', 'err'); return false; }
+        openIds[g.p.idProyek] = true; MP.toast('Termin lunas · dana masuk tercatat', 'ok'); await load();
+      }
+    });
+  }
+
+  /* ---------- aksi ---------- */
+  function findT(id) { return termin.filter(function (t) { return String(t.idTermin) === String(id); })[0]; }
+  function groupOf(t) { return groups().filter(function (g) { return projKey(g.p) === projKey(t); })[0]; }
+  document.addEventListener('click', async function (e) {
+    var sum = e.target.closest('.tm-sum');
+    if (sum) { var card = sum.closest('.tm-proj'); card.classList.toggle('open'); openIds[card.dataset.pid] = card.classList.contains('open'); return; }
+    var b = e.target.closest('[data-a]'); if (!b) return;
+    var a = b.dataset.a;
+    if (a === 'plan') return planModal(b.dataset.pid);
+    if (a === 'add') { var g = groups().filter(function (x) { return String(x.p.idProyek) === b.dataset.pid; })[0]; return g && oneModal(null, g); }
+    var t = findT(b.dataset.id); if (!t) return; var g2 = groupOf(t);
+    if (a === 'edit') return oneModal(t, g2);
+    if (a === 'lunas') return lunasModal(t, g2);
+    if (a === 'del') {
+      if (!(await MP.confirm('Hapus termin "' + t.nama + '"?'))) return;
+      var r = await MP.post('deleteTermin', { idTermin: t.idTermin });
+      if (!r.success) return MP.toast(r.message || 'Gagal menghapus', 'err');
+      openIds[g2.p.idProyek] = true; MP.toast('Termin dihapus', 'ok'); load();
+    }
+    if (a === 'batal') {
+      if (!(await MP.confirm('Batalkan pelunasan "' + t.nama + '"? Dana masuk yang tercatat akan dihapus dari proyek.'))) return;
+      var r2 = await MP.post('batalLunasTermin', { idTermin: t.idTermin });
+      if (!r2.success) return MP.toast(r2.message || 'Gagal', 'err');
+      openIds[g2.p.idProyek] = true; MP.toast('Pelunasan dibatalkan', 'ok'); load();
+    }
+  });
+  $('#addBtn').addEventListener('click', function () { planModal(); });
+  $('#q').addEventListener('input', MP.debounce(render, 120));
+  $('#flt').addEventListener('click', function (e) { var b = e.target.closest('button[data-f]'); if (!b) return; filter = b.dataset.f; MP.$$('#flt button').forEach(function (x) { x.classList.toggle('on', x === b); }); render(); });
+
+  async function load() {
+    var d = await MP.loadAll({ p: 'getProyek', t: 'getTermin', k: 'getKlien' });
+    if (d._error) MP.toast(d._error, 'err');
+    proyek = d.p; termin = d.t; klien = d.k; render();
+  }
+  var want = (function () { try { return new URLSearchParams(location.search).get('proyek'); } catch (e) { return null; } })();
+  if (want) openIds[want] = true;
+  await load();
+  if (want) { var el = document.querySelector('.tm-proj[data-pid="' + want.replace(/"/g, '') + '"]'); if (el) el.scrollIntoView({ block: 'center' }); }
+});
+</script>
+</body>
+</html>

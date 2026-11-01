@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kwitansi — Masterpiece.id</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="mp-shell.css">
+<script src="mp-shell.js"></script>
+<script src="mp-docs.js"></script>
+</head>
+<body>
+<main class="mp-main"><div class="mp-wrap" style="max-width:1280px">
+  <div id="tabsHost"></div>
+  <div class="md-bar">
+    <div class="grp"><span class="md-chip" id="stChip">Draft</span></div>
+    <div class="grp">
+      <button type="button" class="mp-btn" id="btnSign"></button>
+      <button type="button" class="mp-btn" id="btnSave"></button>
+      <button type="button" class="mp-btn dark" id="btnPrint"></button>
+    </div>
+  </div>
+  <div class="md-layout">
+    <div class="md-form" id="form"></div>
+    <div class="md-prev">
+      <div class="md-zoom"><button type="button" id="zMin" aria-label="Perkecil">−</button><span id="zLbl">100%</span><button type="button" id="zPlus" aria-label="Perbesar">+</button></div>
+      <div class="md-stage" id="stage"><div class="md-sizer" id="sizer"><div class="dp" id="docPaper"></div></div></div>
+    </div>
+  </div>
+</div></main>
+
+<script>
+MP.ready(async function () {
+  var $ = MP.$, esc = MP.esc, S = {}, klien = [], proyek = [], docs = [];
+  var dirty = false, saved = false, zoom;
+  var user = MP.user;
+
+  $('#tabsHost').innerHTML = MPD.tabs('kwitansi');
+  $('#btnSign').innerHTML = MP.icon('edit') + ' Tanda tangan';
+  $('#btnSave').innerHTML = MP.icon('check') + ' Simpan';
+  $('#btnPrint').innerHTML = MP.icon('print') + ' Ekspor PDF';
+
+  var D = {
+    idDokumen: '', nomor: '', tanggal: MP.today(),
+    klienKode: '', klienNama: '', proyekKode: '', proyekNama: '', proyekText: '', invoiceNo: '',
+    jumlah: 0, untuk: '', metode: 'Transfer Bank', show: { pt: false, ttd: true, stempel: false }, sig: ''
+  };
+  var METODE = ['Transfer Bank', 'Tunai', 'QRIS', 'Cek / Giro', 'Lainnya'];
+
+  function markDirty() { dirty = true; setChip(); }
+  function setChip() {
+    var c = $('#stChip');
+    if (!saved) { c.textContent = 'Draft'; c.className = 'md-chip'; }
+    else if (dirty) { c.textContent = 'Belum disimpan'; c.className = 'md-chip warn'; }
+    else { c.textContent = 'Tersimpan'; c.className = 'md-chip ok'; }
+  }
+  function klienRec() { return klien.filter(function (k) { return String(k.kodeKlien).toUpperCase() === String(D.klienKode).toUpperCase(); })[0]; }
+
+  function renderPaper() {
+    var amt = MP.num(D.jumlah);
+    var signer = S.penandatangan || user.nama || '', jab = S.jabatan || '';
+    var showSig = D.show.ttd || D.show.stempel;
+    var sigHTML = showSig ? MPD.signBlock({ nama: signer, jabatan: jab, kota: S.kota, tanggal: D.tanggal, img: D.show.ttd ? D.sig : '', stamp: D.show.stempel, s: S }) : '';
+    var foot = [S.namaPerusahaan, S.tagline].filter(Boolean).join(' · ');
+    $('#docPaper').innerHTML =
+      '<div class="dp-head">' + MPD.letterhead(S, D.show.pt) +
+      '<div><div class="dp-title">KWITANSI</div><table class="dp-meta"><tr><td>No.</td><td>' + esc(D.nomor || $('#fNomor').value || '—') + '</td></tr><tr><td>Tanggal</td><td>' + esc(MPD.tglPanjang(D.tanggal)) + '</td></tr>' +
+      (D.invoiceNo ? '<tr><td>Ref. invoice</td><td>' + esc(D.invoiceNo) + '</td></tr>' : '') + '</table></div></div>' +
+      '<div class="dp-kw">' +
+      '<div class="r"><div class="k">Telah terima dari</div><div class="v">' + esc(D.klienNama || '—') + '</div></div>' +
+      '<div class="r"><div class="k">Uang sejumlah</div><div class="v words">' + (amt ? esc(MPD.terbilangRupiah(amt)) : '—') + '</div></div>' +
+      '<div class="r"><div class="k">Untuk pembayaran</div><div class="v">' + esc(D.untuk || '—') + (D.proyekText ? '\n' + esc(D.proyekText) : '') + '</div></div>' +
+      '<div class="r"><div class="k">Metode</div><div class="v">' + esc(D.metode) + '</div></div>' +
+      '<div class="big">' + MP.rupiah(amt) + '</div></div>' +
+      '<div class="dp-sigrow"><div></div>' + sigHTML + '</div>' +
+      '<div class="dp-foot">' + esc(foot) + '</div>';
+    if (zoom) zoom.refresh();
+  }
+
+  function buildForm() {
+    $('#form').innerHTML =
+      '<div class="md-card"><h3>Kwitansi</h3>' +
+      '<div class="mp-field"><label class="mp-label">Nomor</label><input class="mp-input" id="fNomor" readonly><p class="mp-hint" id="nomorHint">Diberikan saat disimpan.</p></div>' +
+      '<div class="mp-field"><label class="mp-label">Tanggal</label><input class="mp-input" type="date" id="fTgl"></div>' +
+      '<div class="mp-field"><label class="mp-label">Diterima dari (klien)</label><select class="mp-select" id="fKlien"></select><input class="mp-input" id="fKlienManual" placeholder="Nama pembayar" style="display:none;margin-top:8px"></div>' +
+      '<div class="mp-field"><label class="mp-label">Isi dari invoice <span style="font-weight:400;color:var(--ink-faint)">(opsional)</span></label><select class="mp-select" id="fInv"></select></div>' +
+      '<div class="mp-field"><label class="mp-label">Proyek</label><select class="mp-select" id="fProyekPick"></select></div></div>' +
+      '<div class="md-card"><h3>Pembayaran</h3>' +
+      '<div class="mp-field"><label class="mp-label">Jumlah</label><div class="mp-money"><span>Rp</span><input class="mp-input" id="fJumlah" placeholder="0"></div><p class="mp-hint" id="fTerbilang"></p></div>' +
+      '<div class="mp-field"><label class="mp-label">Untuk pembayaran</label><textarea class="mp-textarea" id="fUntuk" rows="3" placeholder="Pelunasan termin 2 pekerjaan interior…"></textarea></div>' +
+      '<div class="mp-field"><label class="mp-label">Metode</label><select class="mp-select" id="fMetode">' + METODE.map(function (m) { return '<option>' + m + '</option>'; }).join('') + '</select></div></div>' +
+      '<div class="md-card"><h3>Tampilkan</h3>' +
+      MPD.toggle('tPt', 'Nama PT', 'Pakai nama badan usaha (Pengaturan) di kop dan footer.', D.show.pt) +
+      MPD.toggle('tTtd', 'Tanda tangan', 'Blok penandatangan di bagian bawah.', D.show.ttd) +
+      MPD.toggle('tStempel', 'Stempel', 'Stempel bulat perusahaan di samping tanda tangan.', D.show.stempel) + '</div>';
+
+    $('#fKlien').innerHTML = '<option value="">— pilih klien —</option>' + klien.slice().sort(function (a, b) { return String(a.namaKlien).localeCompare(String(b.namaKlien)); }).map(function (k) {
+      return '<option value="' + esc(k.kodeKlien) + '">' + esc(k.kodeKlien + ' — ' + k.namaKlien) + '</option>'; }).join('') + '<option value="__manual">Ketik manual…</option>';
+    fillInv(); fillProyek();
+    MP.moneyInput($('#fJumlah'));
+    syncForm(); bind();
+  }
+  function fillProyek() {
+    var list = proyek.filter(MP.canSeeProject).filter(function (p) { return !D.klienKode || String(p.klienKode || '').toUpperCase() === D.klienKode.toUpperCase() || !p.klienKode; });
+    $('#fProyekPick').innerHTML = '<option value="">— tanpa proyek —</option>' + list.map(function (p) { return '<option value="' + esc(p.idProyek) + '">' + esc(MP.projectLabel(p)) + '</option>'; }).join('');
+  }
+  function fillInv() {
+    var list = docs.filter(function (d) { return d.tipe === 'invoice'; }).sort(function (a, b) { return String(b.tanggal).localeCompare(String(a.tanggal)); });
+    $('#fInv').innerHTML = '<option value="">— tidak merujuk invoice —</option>' + list.map(function (d) {
+      return '<option value="' + esc(d.idDokumen) + '">' + esc(d.nomor + ' · ' + (d.klienNama || '') + ' · ' + MP.rupiah(MP.num(d.total))) + '</option>'; }).join('');
+  }
+  function syncForm() {
+    $('#fNomor').value = D.nomor || MPD.nextNumber(S.prefixKwitansi || 'KWT', 'kwitansi', docs, D.tanggal);
+    $('#nomorHint').textContent = D.idDokumen ? 'Nomor tetap.' : 'Diberikan saat disimpan.';
+    $('#fTgl').value = D.tanggal;
+    var kk = D.klienKode && klien.some(function (k) { return String(k.kodeKlien).toUpperCase() === D.klienKode.toUpperCase(); });
+    $('#fKlien').value = kk ? D.klienKode : (D.klienNama ? '__manual' : '');
+    $('#fKlienManual').style.display = $('#fKlien').value === '__manual' ? '' : 'none'; $('#fKlienManual').value = kk ? '' : D.klienNama;
+    MP.setMoney($('#fJumlah'), MP.num(D.jumlah)); $('#fUntuk').value = D.untuk; $('#fMetode').value = D.metode;
+    $('#fInv').value = D.invoiceNo ? ((docs.filter(function (d) { return d.tipe === 'invoice' && d.nomor === D.invoiceNo; })[0] || {}).idDokumen || '') : '';
+    terbilangHint();
+  }
+  function terbilangHint() { var a = MP.num(D.jumlah); $('#fTerbilang').textContent = a ? MPD.terbilangRupiah(a) : ''; }
+
+  function bind() {
+    $('#fTgl').addEventListener('change', function () {
+      D.tanggal = this.value || MP.today();
+      if (!D.idDokumen) $('#fNomor').value = MPD.nextNumber(S.prefixKwitansi || 'KWT', 'kwitansi', docs, D.tanggal);
+      markDirty(); renderPaper();
+    });
+    $('#fKlien').addEventListener('change', function () {
+      var v = this.value;
+      if (v === '__manual') { D.klienKode = ''; $('#fKlienManual').style.display = ''; D.klienNama = $('#fKlienManual').value; }
+      else { $('#fKlienManual').style.display = 'none'; var k = klien.filter(function (x) { return x.kodeKlien === v; })[0]; D.klienKode = k ? k.kodeKlien : ''; D.klienNama = k ? k.namaKlien : ''; }
+      fillProyek(); markDirty(); renderPaper();
+    });
+    $('#fKlienManual').addEventListener('input', function () { D.klienNama = this.value; markDirty(); renderPaper(); });
+    $('#fProyekPick').addEventListener('change', function () {
+      var p = proyek.filter(function (x) { return String(x.idProyek) === $('#fProyekPick').value; })[0];
+      if (!p) { D.proyekKode = ''; D.proyekNama = ''; D.proyekText = ''; }
+      else {
+        D.proyekKode = p.kodeProyek || ''; D.proyekNama = p.namaProyek; D.proyekText = MP.projectLabel(p);
+        if (!D.klienKode && p.klienKode) { var k = klien.filter(function (x) { return x.kodeKlien === p.klienKode; })[0]; if (k) { D.klienKode = k.kodeKlien; D.klienNama = k.namaKlien; $('#fKlien').value = k.kodeKlien; } }
+      }
+      markDirty(); renderPaper();
+    });
+    $('#fInv').addEventListener('change', function () {
+      var d = docs.filter(function (x) { return String(x.idDokumen) === $('#fInv').value; })[0];
+      if (!d) { D.invoiceNo = ''; markDirty(); renderPaper(); return; }
+      D.invoiceNo = d.nomor; D.jumlah = MP.num(d.total);
+      if (d.klienNama) { D.klienKode = d.klienKode || ''; D.klienNama = d.klienNama; }
+      if (d.proyekNama || d.proyekKode) { D.proyekKode = d.proyekKode || ''; D.proyekNama = d.proyekNama || ''; D.proyekText = [d.proyekKode, d.proyekNama].filter(Boolean).join(' · '); }
+      if (!D.untuk) D.untuk = 'Pembayaran invoice ' + d.nomor;
+      syncForm(); markDirty(); renderPaper();
+    });
+    $('#fJumlah').addEventListener('input', function () { D.jumlah = MP.moneyVal(this); terbilangHint(); markDirty(); renderPaper(); });
+    $('#fUntuk').addEventListener('input', function () { D.untuk = this.value; markDirty(); renderPaper(); });
+    $('#fMetode').addEventListener('change', function () { D.metode = this.value; markDirty(); renderPaper(); });
+    [['tPt', 'pt'], ['tTtd', 'ttd'], ['tStempel', 'stempel']].forEach(function (x) {
+      $('#' + x[0]).addEventListener('change', function () { D.show[x[1]] = this.checked; markDirty(); renderPaper(); });
+    });
+  }
+
+  $('#btnSign').addEventListener('click', async function () {
+    var r = await MPD.signPad({ title: 'Tanda tangan penandatangan', key: 'company', current: D.sig });
+    if (r === null) return;
+    D.sig = r; if (r) { D.show.ttd = true; $('#tTtd').checked = true; } markDirty(); renderPaper();
+    MP.toast(r ? 'Tanda tangan dipasang' : 'Tanda tangan dihapus', 'ok');
+  });
+  $('#btnPrint').addEventListener('click', function () { MPD.printDoc(D.nomor || $('#fNomor').value); });
+
+  async function save() {
+    if (!D.klienNama.trim()) { MP.toast('Pilih atau isi nama pembayar dulu', 'err'); return; }
+    if (MP.num(D.jumlah) <= 0) { MP.toast('Isi jumlah pembayaran', 'err'); return; }
+    var btn = $('#btnSave'); btn.disabled = true;
+    var nomor = D.nomor || MPD.nextNumber(S.prefixKwitansi || 'KWT', 'kwitansi', docs, D.tanggal);
+    async function attempt(no) {
+      var data = JSON.parse(JSON.stringify(D)); data.nomor = no;
+      return MP.post('saveDokumen', {
+        tipe: 'kwitansi', idDokumen: D.idDokumen || undefined, nomor: no, tanggal: D.tanggal, klienKode: D.klienKode, klienNama: D.klienNama,
+        proyekKode: D.proyekKode, proyekNama: D.proyekNama, total: MP.num(D.jumlah), status: 'tersimpan', dataJson: JSON.stringify(data)
+      });
+    }
+    var r = await attempt(nomor);
+    if (!r.success && /sudah dipakai/i.test(r.message || '') && !D.idDokumen) {
+      var g = await MP.get('getDokumen'); if (g.success) docs = g.data || [];
+      nomor = MPD.nextNumber(S.prefixKwitansi || 'KWT', 'kwitansi', docs, D.tanggal); r = await attempt(nomor);
+    }
+    btn.disabled = false;
+    if (!r.success) { MP.toast(r.message || 'Gagal menyimpan', 'err'); return; }
+    D.idDokumen = r.id || D.idDokumen; D.nomor = nomor; saved = true; dirty = false;
+    $('#fNomor').value = nomor; $('#nomorHint').textContent = 'Nomor tetap.';
+    try { history.replaceState(null, '', 'kwitansi.html?id=' + encodeURIComponent(D.idDokumen)); } catch (e) {}
+    setChip(); renderPaper(); MP.toast('Kwitansi ' + nomor + ' tersimpan', 'ok');
+    MP.get('getDokumen').then(function (g) { if (g.success) docs = g.data || []; });
+  }
+  $('#btnSave').addEventListener('click', save);
+  document.addEventListener('keydown', function (e) { if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); save(); } });
+
+  var c = await MPD.loadCommon();
+  S = c.settings; klien = c.klien; proyek = c.proyek; docs = c.dok;
+  if (c._error) MP.toast(c._error, 'err');
+
+  var idQ = MPD.qs('id'), dupQ = MPD.qs('dup');
+  var src = idQ || dupQ ? docs.filter(function (d) { return String(d.idDokumen) === String(idQ || dupQ); })[0] : null;
+  if (src) {
+    var data = MPD.parseData(src);
+    D = Object.assign(D, data);
+    D.show = Object.assign({ pt: false, ttd: true, stempel: false }, data.show || {});
+    if (idQ) { D.idDokumen = src.idDokumen; D.nomor = src.nomor; saved = true; }
+    else { D.idDokumen = ''; D.nomor = ''; D.tanggal = MP.today(); dirty = true; }
+  } else {
+    var kq = MPD.qs('klien'), pq = MPD.qs('proyek');
+    if (pq) { var p = proyek.filter(function (x) { return String(x.idProyek) === pq; })[0]; if (p) { D.proyekKode = p.kodeProyek || ''; D.proyekNama = p.namaProyek; D.proyekText = MP.projectLabel(p); kq = kq || p.klienKode; } }
+    if (kq) { var k = klien.filter(function (x) { return String(x.kodeKlien).toUpperCase() === String(kq).toUpperCase(); })[0]; if (k) { D.klienKode = k.kodeKlien; D.klienNama = k.namaKlien; } }
+    var tq = MPD.qs('termin');
+    if (tq) {
+      try {
+        var tr = await MP.get('getTermin'); var tm = (tr.data || []).filter(function (x) { return String(x.idTermin) === String(tq); })[0];
+        if (tm) {
+          var tp = proyek.filter(function (x) { return (tm.proyekKode && x.kodeProyek === tm.proyekKode) || x.namaProyek === tm.proyekNama; })[0];
+          D.proyekKode = tm.proyekKode || ''; D.proyekNama = tm.proyekNama || ''; D.proyekText = tp ? MP.projectLabel(tp) : (tm.proyekNama || '');
+          var kk = klien.filter(function (x) { return String(x.kodeKlien).toUpperCase() === String(tm.klienKode).toUpperCase(); })[0];
+          D.klienKode = kk ? kk.kodeKlien : (tm.klienKode || ''); D.klienNama = kk ? kk.namaKlien : (tm.klienNama || '');
+          D.jumlah = MP.num(tm.nominal); D.invoiceNo = tm.invoiceNo || '';
+          D.untuk = 'Pembayaran ' + tm.nama + (MP.num(tm.persen) ? ' (' + MP.num(tm.persen) + '%)' : '') + ' pekerjaan ' + (tm.proyekNama || '');
+          if (tm.tanggalLunas && MP.isoDate(tm.tanggalLunas)) D.tanggal = MP.isoDate(tm.tanggalLunas);
+          dirty = true;
+        }
+      } catch (e) {}
+    }
+  }
+  buildForm(); renderPaper(); setChip();
+  zoom = MPD.zoomCtl($('#stage'), $('#sizer'), $('#docPaper'), $('#zLbl'), $('#zMin'), $('#zPlus'));
+  renderPaper();
+});
+</script>
+</body>
+</html>

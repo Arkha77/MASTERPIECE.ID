@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pengaturan — Masterpiece.id</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="mp-shell.css">
+<script src="mp-shell.js"></script>
+<style> .st-sec{ margin-bottom:20px; } .st-sec h2{ margin:0 0 4px; font-size:16px; } .st-sec .mp-sub{ margin:0 0 16px; } </style>
+</head>
+<body>
+<main class="mp-main"><div class="mp-wrap narrow">
+  <div class="mp-head"><div><h1 class="mp-title">Pengaturan</h1><p class="mp-sub">Data perusahaan yang muncul di kop, footer, rekening, dan tanda tangan semua dokumen (invoice, kwitansi, RAB).</p></div></div>
+  <form id="f">
+    <div class="mp-card st-sec">
+      <h2>Perusahaan</h2><p class="mp-sub">Tampil di kop surat.</p>
+      <div class="mp-field"><label class="mp-label">Nama tampilan</label><input class="mp-input" name="namaPerusahaan" placeholder="Masterpiece.id"></div>
+      <div class="mp-field"><label class="mp-label">Nama badan usaha (opsional)</label><input class="mp-input" name="namaLegal" placeholder="PT / CV ..."><p class="mp-hint">Ditampilkan di dokumen bila opsi "Nama PT" dinyalakan.</p></div>
+      <div class="mp-field"><label class="mp-label">Alamat</label><input class="mp-input" name="alamat" placeholder="Jl. Nuri Raya No 220, Pekanbaru"></div>
+      <div class="mp-row2"><div class="mp-field"><label class="mp-label">Email</label><input class="mp-input" name="email" type="email"></div><div class="mp-field"><label class="mp-label">Telepon / WhatsApp</label><input class="mp-input" name="telepon"></div></div>
+      <div class="mp-row2"><div class="mp-field"><label class="mp-label">Kota (untuk tanggal tanda tangan)</label><input class="mp-input" name="kota" placeholder="Pekanbaru"></div><div class="mp-field"><label class="mp-label">NPWP (opsional)</label><input class="mp-input" name="npwp"></div></div>
+      <div class="mp-field"><label class="mp-label">Tagline</label><input class="mp-input" name="tagline" placeholder="Built for Better Living"></div>
+    </div>
+    <div class="mp-card st-sec">
+      <h2>Rekening pembayaran</h2><p class="mp-sub">Tampil di invoice sebagai tujuan transfer.</p>
+      <div class="mp-row2"><div class="mp-field"><label class="mp-label">Bank</label><input class="mp-input" name="bank" placeholder="BCA"></div><div class="mp-field"><label class="mp-label">Nomor rekening</label><input class="mp-input" name="noRekening" inputmode="numeric"></div></div>
+      <div class="mp-field"><label class="mp-label">Atas nama</label><input class="mp-input" name="atasNamaRekening"></div>
+    </div>
+    <div class="mp-card st-sec">
+      <h2>Penandatangan &amp; dokumen</h2><p class="mp-sub">Nama dan jabatan di blok tanda tangan, serta nilai bawaan dokumen.</p>
+      <div class="mp-row2"><div class="mp-field"><label class="mp-label">Nama penandatangan</label><input class="mp-input" name="penandatangan" placeholder="Aldi"></div><div class="mp-field"><label class="mp-label">Jabatan</label><input class="mp-input" name="jabatan" placeholder="Owner"></div></div>
+      <div class="mp-row2"><div class="mp-field"><label class="mp-label">Awalan nomor invoice</label><input class="mp-input" name="prefixInvoice" placeholder="INV"></div><div class="mp-field"><label class="mp-label">PPN bawaan (%)</label><input class="mp-input" name="ppnPersen" inputmode="decimal" placeholder="11"></div></div>
+      <div class="mp-field"><label class="mp-label">Catatan bawaan di invoice</label><textarea class="mp-textarea" name="catatanDefault" rows="3" placeholder="Termin pembayaran, rekening, dll."></textarea></div>
+    </div>
+    <div class="mp-card st-sec">
+      <h2>Identitas pemilik</h2><p class="mp-sub">Data pribadi pemilik yang otomatis terisi sebagai Pihak Pertama di Surat Kontrak. Hanya terlihat oleh Owner/Admin; staf tidak dapat melihatnya.</p>
+      <div class="mp-row2"><div class="mp-field"><label class="mp-label">Nama lengkap (sesuai KTP)</label><input class="mp-input" name="pemilikNama"></div><div class="mp-field"><label class="mp-label">NIK</label><input class="mp-input" name="pemilikNik" inputmode="numeric" maxlength="16"></div></div>
+      <div class="mp-field"><label class="mp-label">Alamat lengkap</label><textarea class="mp-textarea" name="pemilikAlamat" rows="2"></textarea></div>
+      <div class="mp-field"><label class="mp-label">No. HP</label><input class="mp-input" name="pemilikHp"></div>
+      <div class="mp-field"><label class="mp-label">Foto KTP</label>
+        <div id="ktpBox" style="display:flex;gap:14px;align-items:center;flex-wrap:wrap"><div id="ktpPrev" style="width:200px;min-height:110px;border:1px dashed var(--line);border-radius:12px;display:flex;align-items:center;justify-content:center;overflow:hidden;color:var(--ink-faint);font-size:12px;background:var(--cream)">Belum ada foto</div>
+        <div><input type="file" accept="image/*" id="ktpFile" style="display:none"><button type="button" class="mp-btn sm" id="ktpBtn">Unggah / ganti foto</button><p class="mp-hint" style="margin-top:8px">Disimpan privat di Google Drive, dipakai untuk lampiran kontrak.</p></div></div></div>
+    </div>
+    <div class="mp-card st-sec">
+      <h2>Tanda tangan resmi</h2><p class="mp-sub">Aset tanda tangan pemilik (latar transparan, tinta biru tua). Tinggal dipakai di RAB, Invoice, Kwitansi, dan Surat Kontrak lewat tombol "Tanda tangan". Hanya Owner/Admin.</p>
+      <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">
+        <div id="ttdPrev" style="width:200px;min-height:120px;border:1px dashed var(--line);border-radius:12px;background:#fff;display:flex;align-items:center;justify-content:center;color:var(--ink-faint);font-size:12px;padding:8px">Belum ada</div>
+        <div><input type="file" accept="image/png" id="ttdFile" style="display:none"><button type="button" class="mp-btn sm" id="ttdBtn">Unggah / ganti (PNG transparan)</button> <button type="button" class="mp-btn sm" id="ttdDel" style="color:var(--rust)">Hapus</button><p class="mp-hint" style="margin-top:8px">Gunakan PNG latar transparan, lebar maksimal sekitar 500 px.</p></div>
+      </div>
+    </div>
+    <button class="mp-btn dark" type="submit" id="save">Simpan pengaturan</button>
+  </form>
+</div></main>
+<script>
+MP.ready(function () {
+  var f = document.getElementById('f');
+  var KEYS = ['namaPerusahaan', 'namaLegal', 'alamat', 'email', 'telepon', 'kota', 'npwp', 'tagline', 'bank', 'noRekening', 'atasNamaRekening', 'penandatangan', 'jabatan', 'prefixInvoice', 'ppnPersen', 'catatanDefault', 'pemilikNama', 'pemilikNik', 'pemilikAlamat', 'pemilikHp'];
+  if (!MP.priv) { MP.$$('input,textarea,button', f).forEach(function (x) { x.disabled = true; }); MP.toast('Hanya Owner/Admin yang bisa mengubah pengaturan', 'err'); }
+  MP.get('getSettings').then(function (r) {
+    var s = (r && r.data) || {};
+    KEYS.forEach(function (k) { if (f[k]) f[k].value = s[k] == null ? '' : s[k]; });
+  });
+  function showKtp(url) { var pv = document.getElementById('ktpPrev'); pv.innerHTML = url ? '<img src="' + url + '" alt="KTP" style="width:100%;display:block">' : 'Belum ada foto'; }
+  if (MP.priv) MP.get('getKtpPemilik').then(function (r) { if (r && r.success && r.data) showKtp(r.data); });
+  function showTtd(v) { document.getElementById('ttdPrev').innerHTML = v ? '<img src="' + v + '" alt="Tanda tangan" style="max-width:100%;max-height:160px">' : 'Belum ada'; }
+  MP.get('getSettings').then(function (r) { var s = (r && r.data) || {}; showTtd(s.pemilikTtd || ''); });
+  document.getElementById('ttdBtn').addEventListener('click', function () { document.getElementById('ttdFile').click(); });
+  document.getElementById('ttdFile').addEventListener('change', async function () {
+    var file = this.files && this.files[0]; if (!file) return; var inp = this;
+    var rd = new FileReader();
+    rd.onload = async function () {
+      var img = new Image();
+      img.onload = async function () {
+        var v = rd.result;   // PNG asli dipakai apa adanya bila sudah ringan (menjaga kualitas)
+        if (!(v.length <= 45000 && img.width <= 600)) {
+          var w = Math.min(500, img.width), tries = 0;
+          do {
+            var h = Math.round(img.height * w / img.width), c = document.createElement('canvas'); c.width = w; c.height = h;
+            c.getContext('2d').drawImage(img, 0, 0, w, h); v = c.toDataURL('image/png'); w = Math.round(w * 0.8); tries++;
+          } while (v.length > 45000 && tries < 5);
+        }
+        if (v.length > 45000) { MP.toast('Gambar terlalu besar. Pakai PNG transparan yang lebih sederhana.', 'err'); inp.value = ''; return; }
+        var r = await MP.post('updateSettings', { pemilikTtd: v });
+        if (r.success) { showTtd(v); try { localStorage.setItem('mp_sig_company', v); } catch (e) {} MP.toast('Tanda tangan resmi tersimpan', 'ok'); } else MP.toast(r.message || 'Gagal menyimpan', 'err');
+        inp.value = '';
+      };
+      img.src = rd.result;
+    };
+    rd.readAsDataURL(file);
+  });
+  document.getElementById('ttdDel').addEventListener('click', async function () {
+    if (!(await MP.confirm('Hapus tanda tangan resmi?'))) return;
+    var r = await MP.post('updateSettings', { pemilikTtd: '' });
+    if (r.success) { showTtd(''); try { localStorage.removeItem('mp_sig_company'); } catch (e) {} MP.toast('Tanda tangan resmi dihapus', 'ok'); }
+  });
+  document.getElementById('ktpBtn').addEventListener('click', function () { document.getElementById('ktpFile').click(); });
+  document.getElementById('ktpFile').addEventListener('change', async function () {
+    var file = this.files && this.files[0]; if (!file) return;
+    var img = await MP.readImage(file, 1100, 0.78);
+    var r = await MP.post('uploadKtpPemilik', { base64: img.base64, mime: img.mime });
+    if (r.success) { showKtp('data:' + img.mime + ';base64,' + img.base64); MP.toast('Foto KTP tersimpan (privat)', 'ok'); } else MP.toast(r.message || 'Gagal mengunggah', 'err');
+    this.value = '';
+  });
+  f.addEventListener('submit', async function (e) {
+    e.preventDefault();
+    var p = {}; KEYS.forEach(function (k) { p[k] = f[k].value.trim(); });
+    // noRekening dipaksa teks agar angka nol di depan tidak hilang
+    if (p.noRekening) p.noRekening = String(p.noRekening);
+    var b = document.getElementById('save'); b.disabled = true; b.textContent = 'Menyimpan…';
+    var r = await MP.post('updateSettings', p);
+    b.disabled = false; b.textContent = 'Simpan pengaturan';
+    MP.toast(r.success ? 'Pengaturan tersimpan' : (r.message || 'Gagal menyimpan'), r.success ? 'ok' : 'err');
+  });
+});
+</script>
+</body>
+</html>

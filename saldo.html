@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Saldo — Masterpiece.id</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="mp-shell.css">
+<script src="mp-shell.js"></script>
+<style>
+  .sd-cards{ display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:8px; }
+  .sd-stat{ padding:16px 18px; }
+  .sd-stat .l{ font-size:11.5px; color:var(--ink-soft); font-weight:600; letter-spacing:.04em; }
+  .sd-stat .v{ font-size:22px; font-weight:700; margin-top:6px; letter-spacing:-.01em; }
+  .sd-stat .n{ font-size:11.5px; color:var(--ink-faint); margin-top:4px; }
+  .sd-bar{ width:120px; }
+  .neg{ color:var(--rust) !important; }
+  @media (max-width:980px){ .sd-cards{ grid-template-columns:1fr 1fr; } }
+  @media (max-width:560px){ .sd-cards{ grid-template-columns:1fr; } .mp-table{ font-size:12.5px; } }
+</style>
+</head>
+<body>
+<main class="mp-main"><div class="mp-wrap">
+  <div class="mp-head">
+    <div><h1 class="mp-title">Saldo</h1><p class="mp-sub">Posisi kas tiap proyek, kas per metode pembayaran, dan kewajiban yang masih terbuka.</p></div>
+  </div>
+  <div class="sd-cards" id="cards"></div>
+
+  <div class="mp-sec">Saldo per proyek</div>
+  <div class="mp-card flush" style="overflow-x:auto"><table class="mp-table num" id="tblProj"><thead><tr><th>Proyek</th><th class="num">Dana masuk</th><th class="num">Terpakai</th><th class="num">Saldo</th><th>Batas belanja</th></tr></thead><tbody><tr><td colspan="5"><div class="mp-loading">Memuat…</div></td></tr></tbody></table></div>
+
+  <div class="mp-sec">Saldo per metode pembayaran</div>
+  <div class="mp-card flush" style="overflow-x:auto"><table class="mp-table num" id="tblMetode"><thead><tr><th>Metode</th><th class="num">Masuk</th><th class="num">Keluar</th><th class="num">Saldo</th></tr></thead><tbody></tbody></table></div>
+  <p class="mp-hint" style="margin-top:8px">Drop ke proyek dan pengembalian ke perusahaan tidak dihitung di sini karena hanya memindahkan dana antar kantong, bukan menambah atau mengurangi kas.</p>
+</div></main>
+
+<script>
+MP.ready(function () {
+  var $ = MP.$, esc = MP.esc;
+  function load() {
+    return MP.loadAll({ p: 'getProyek', t: 'getTransaksi', k: 'getKontrakVendor', b: 'getPembayaranVendor', i: 'getInvoice' }).then(function (d) {
+      if (d._error) MP.toast(d._error, 'err');
+      var proyek = d.p.filter(MP.canSeeProject);
+      var totD = 0, totS = 0, rows = proyek.map(function (p) { var s = MP.projectStats(p, d.t); totD += s.dropped; totS += s.spent; return { p: p, s: s }; })
+        .sort(function (a, b) { return a.s.balance - b.s.balance; });
+      var hutang = d.k.filter(function (k) { return String(k.status || 'open').toLowerCase() !== 'done'; }).reduce(function (sum, k) {
+        var pd = d.b.filter(function (x) { return String(x.kontrakId) === String(k.idKontrak); }).reduce(function (a, x) { return a + MP.num(x.jumlah); }, 0);
+        return sum + Math.max(0, MP.num(k.nilaiKontrak) - pd);
+      }, 0);
+      var piutang = d.i.filter(function (i) { return String(i.status).toLowerCase().indexOf('lunas') === -1 || String(i.status).toLowerCase().indexOf('belum') !== -1; })
+        .reduce(function (a, i) { return a + MP.num(i.jumlah); }, 0);
+      $('#cards').innerHTML = [
+        ['Dana masuk proyek', MP.rupiah(totD), proyek.length + ' proyek', ''],
+        ['Terpakai', MP.rupiah(totS), totD > 0 ? Math.round(totS / totD * 100) + '% dari dana masuk' : '', ''],
+        ['Saldo proyek', MP.rupiah(totD - totS), 'dana yang masih dipegang', totD - totS < 0 ? 'neg' : ''],
+        ['Hutang ke vendor', MP.rupiah(hutang), 'sisa kontrak berjalan · piutang invoice ' + MP.rupiah(piutang), '']
+      ].map(function (c) { return '<div class="mp-card sd-stat"><div class="l">' + c[0] + '</div><div class="v ' + c[3] + '">' + c[1] + '</div><div class="n">' + c[2] + '</div></div>'; }).join('');
+
+      $('#tblProj tbody').innerHTML = rows.length ? rows.map(function (r) {
+        var s = r.s, cls = s.over ? 'over' : s.pct >= 80 ? 'warn' : '';
+        return '<tr><td><b>' + esc(r.p.kodeProyek || '') + '</b> ' + esc(r.p.namaProyek) + '</td><td class="num">' + MP.rupiah(s.dropped) + '</td><td class="num">' + MP.rupiah(s.spent) + '</td>' +
+          '<td class="num ' + (s.balance < 0 ? 'neg' : '') + '"><b>' + MP.rupiah(s.balance) + '</b></td>' +
+          '<td><div class="sd-bar"><div class="mp-progress ' + cls + '"><i style="width:' + Math.min(100, s.pct) + '%"></i></div><div class="mp-hint" style="margin:3px 0 0">' + (s.over ? 'Melebihi batas' : s.pct + '%') + '</div></div></td></tr>';
+      }).join('') : '<tr><td colspan="5"><div class="mp-empty">Belum ada proyek.</div></td></tr>';
+
+      var met = {};
+      d.t.forEach(function (t) {
+        var j = String(t.jenis).toLowerCase(); if (j !== 'pemasukan' && j !== 'pengeluaran') return;
+        var m = String(t.metodePembayaran || 'Tidak dicatat') || 'Tidak dicatat';
+        met[m] = met[m] || { i: 0, o: 0 };
+        if (j === 'pemasukan') met[m].i += MP.num(t.jumlah); else met[m].o += MP.num(t.jumlah) + MP.num(t.biayaTransfer);
+      });
+      var keys = Object.keys(met).sort();
+      $('#tblMetode tbody').innerHTML = keys.length ? keys.map(function (k) {
+        var x = met[k], b = x.i - x.o;
+        return '<tr><td><b>' + esc(k) + '</b></td><td class="num">' + MP.rupiah(x.i) + '</td><td class="num">' + MP.rupiah(x.o) + '</td><td class="num ' + (b < 0 ? 'neg' : '') + '"><b>' + MP.rupiah(b) + '</b></td></tr>';
+      }).join('') : '<tr><td colspan="4"><div class="mp-empty">Belum ada transaksi.</div></td></tr>';
+    });
+  }
+  load();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Proyek Vendor — Masterpiece.id</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="mp-shell.css">
+<script src="mp-shell.js"></script>
+<style>
+  .vp-grid{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; }
+  .vp-card{ padding:18px 20px; }
+  .vp-top{ display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
+  .vp-vendor{ font-weight:700; font-size:15px; }
+  .vp-judul{ font-size:12.5px; color:var(--ink-soft); margin-top:2px; }
+  .vp-proj{ font-size:11px; color:var(--ink-faint); margin-top:2px; }
+  .vp-stats{ margin:12px 0 10px; }
+  .vp-stats .mp-kv{ padding:2px 0; }
+  .vp-toggle{ width:100%; display:flex; justify-content:space-between; align-items:center; gap:8px; border:1px solid var(--line); background:var(--cream); border-radius:999px; padding:8px 14px; font:500 12px Inter,sans-serif; color:var(--ink-soft); cursor:pointer; }
+  .vp-toggle svg{ width:13px; height:13px; stroke:currentColor; fill:none; stroke-width:2; transition:transform .15s; }
+  .vp-card.open .vp-toggle svg{ transform:rotate(180deg); }
+  .vp-detail{ display:none; margin-top:10px; font-size:12.5px; }
+  .vp-card.open .vp-detail{ display:block; }
+  .vp-detail h4{ margin:12px 0 4px; font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-faint); }
+  .vp-row{ display:flex; justify-content:space-between; gap:10px; padding:5px 0; border-bottom:1px dashed var(--line); align-items:center; }
+  .vp-row:last-child{ border-bottom:0; }
+  .vp-row small{ color:var(--ink-faint); display:block; }
+  .vp-foot{ display:flex; justify-content:space-between; align-items:center; margin-top:12px; font-size:11.5px; color:var(--ink-soft); gap:8px; flex-wrap:wrap; }
+  .vp-foot a, .vp-foot button.lnk{ color:var(--forest); font-weight:600; background:none; border:0; cursor:pointer; font:inherit; font-weight:600; padding:0; }
+  .vp-actions{ display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
+  .vp-items .row{ display:grid; grid-template-columns:1fr 150px 34px; gap:8px; margin-bottom:8px; align-items:center; }
+  .vp-filter{ display:flex; gap:8px; margin-bottom:18px; flex-wrap:wrap; }
+  .vp-filter button{ font:600 12.5px Inter,sans-serif; padding:7px 14px; border-radius:999px; border:1px solid var(--line); background:var(--paper); color:var(--ink-soft); cursor:pointer; }
+  .vp-filter button.on{ background:var(--pill); color:var(--pill-ink); border-color:var(--pill); }
+  .vp-photos{ display:flex; gap:8px; flex-wrap:wrap; margin-top:6px; }
+  .vp-photos img{ width:56px; height:56px; object-fit:cover; border-radius:10px; border:1px solid var(--line); }
+  @media (max-width:900px){ .vp-grid{ grid-template-columns:1fr; } .vp-items .row{ grid-template-columns:1fr 120px 34px; } }
+</style>
+</head>
+<body>
+<main class="mp-main"><div class="mp-wrap">
+  <div class="mp-head">
+    <div>
+      <h1 class="mp-title">Proyek Vendor</h1>
+      <p class="mp-sub">Pekerjaan yang dipesan ke vendor, dan apa yang sudah dibayarkan untuk tiap pesanan.</p>
+    </div>
+    <div class="mp-actions">
+      <button class="mp-btn" id="exportAll" type="button"><span id="icDl"></span> Ekspor pembayaran</button>
+      <button class="mp-btn dark" id="addBtn" type="button"><span id="icPlus"></span> Proyek vendor baru</button>
+    </div>
+  </div>
+  <div class="vp-filter" id="filter">
+    <button type="button" data-f="all" class="on">Semua</button><button type="button" data-f="open">Berjalan</button><button type="button" data-f="done">Selesai</button>
+  </div>
+  <div class="vp-grid" id="grid"><div class="mp-loading">Memuat…</div></div>
+</div></main>
+
+<script>
+MP.ready(function () {
+  var $ = MP.$, esc = MP.esc;
+  var kontrak = [], bayar = [], vendors = [], proyek = [];
+  var filter = 'all', opened = {};
+  $('#icDl').innerHTML = MP.icon('download'); $('#icPlus').innerHTML = MP.icon('plus');
+
+  function itemsOf(k) { try { var a = JSON.parse(k.items || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
+  function paysOf(k) { return bayar.filter(function (b) { return String(b.kontrakId) === String(k.idKontrak); }).sort(function (a, b) { return MP.isoDate(b.tanggal) < MP.isoDate(a.tanggal) ? -1 : 1; }); }
+  function paid(k) { return paysOf(k).reduce(function (s, b) { return s + MP.num(b.jumlah); }, 0); }
+  function isDone(k) { return String(k.status || 'open').toLowerCase() === 'done'; }
+  function proj(k) { return proyek.filter(function (p) { return (k.proyekKode && p.kodeProyek === k.proyekKode) || p.namaProyek === k.proyekNama; })[0]; }
+
+  function card(k) {
+    var ps = paysOf(k), pd = paid(k), nilai = MP.num(k.nilaiKontrak), rem = nilai - pd;
+    var pct = nilai > 0 ? Math.min(100, Math.round(pd / nilai * 100)) : 0;
+    var its = itemsOf(k), open = !!opened[k.idKontrak];
+    var overdue = !isDone(k) && k.deadline && MP.isoDate(k.deadline) < MP.today() && rem > 0;
+    var h = '<div class="mp-card vp-card' + (open ? ' open' : '') + '" data-id="' + esc(k.idKontrak) + '">' +
+      '<div class="vp-top"><div><div class="vp-vendor">' + esc(k.vendor) + '</div><div class="vp-judul">' + esc(k.judul || '') + '</div><div class="vp-proj">' + esc([k.proyekKode, k.proyekNama].filter(Boolean).join(' · ')) + '</div></div>' +
+      '<div style="display:flex;gap:6px;align-items:center"><span class="mp-pill ' + (isDone(k) ? 'gray' : 'green') + '">' + (isDone(k) ? 'SELESAI' : 'BERJALAN') + '</span>' +
+      '<button type="button" class="mp-btn icon" data-edit="' + esc(k.idKontrak) + '" aria-label="Edit" style="width:28px;height:28px">' + MP.icon('edit') + '</button></div></div>' +
+      '<div class="vp-stats"><div class="mp-kv"><span>Nilai kontrak</span><b>' + MP.rupiah(nilai) + '</b></div>' +
+      '<div class="mp-kv"><span>Sudah dibayar</span><b>' + MP.rupiah(pd) + '</b></div>' +
+      '<div class="mp-kv"><span>Sisa</span><b style="color:' + (rem < 0 ? 'var(--rust)' : 'var(--ink)') + '">' + MP.rupiah(rem) + '</b></div>' +
+      '<div class="mp-kv"><span>Tenggat</span><b' + (overdue ? ' style="color:var(--rust)"' : '') + '>' + (k.deadline ? MP.fmtDate(k.deadline) + (overdue ? ' · lewat' : '') : '—') + '</b></div></div>' +
+      '<button type="button" class="vp-toggle" data-toggle="' + esc(k.idKontrak) + '"><span>Item pekerjaan &amp; riwayat pembayaran</span>' + MP.icon('chev') + '</button>' +
+      '<div class="vp-detail"><h4>Item pekerjaan</h4>';
+    if (!its.length) h += '<div class="mp-hint">Tidak ada rincian item.</div>';
+    its.forEach(function (i) { h += '<div class="vp-row"><span>' + esc(i.nama) + '</span><b>' + MP.rupiah(MP.num(i.nilai)) + '</b></div>'; });
+    if (k.catatan) h += '<div class="mp-hint" style="margin-top:6px">Catatan: ' + esc(k.catatan) + '</div>';
+    h += '<h4>Riwayat pembayaran</h4>';
+    if (!ps.length) h += '<div class="mp-hint">Belum ada pembayaran.</div>';
+    ps.forEach(function (b) {
+      var imgs = String(b.buktiUrl || '').split(',').filter(Boolean);
+      h += '<div class="vp-row"><span>' + MP.fmtDate(b.tanggal) + '<small>' + esc([b.metode, b.catatan].filter(Boolean).join(' · ')) + (imgs.length ? ' · <a href="' + esc(imgs[0]) + '" target="_blank" rel="noopener" style="color:var(--forest)">bukti</a>' : '') + '</small></span>' +
+        '<span style="display:flex;gap:8px;align-items:center"><b>' + MP.rupiah(MP.num(b.jumlah)) + '</b><button type="button" class="mp-btn icon" data-delpay="' + esc(b.idBayar) + '" style="width:26px;height:26px;color:var(--rust)" aria-label="Hapus pembayaran">' + MP.icon('trash') + '</button></span></div>';
+    });
+    h += '<div class="vp-actions"><button type="button" class="mp-btn sm dark" data-pay="' + esc(k.idKontrak) + '">' + MP.icon('plus') + ' Catat pembayaran</button>' +
+      '<button type="button" class="mp-btn sm" data-done="' + esc(k.idKontrak) + '">' + (isDone(k) ? 'Buka kembali' : MP.icon('check') + ' Tandai selesai') + '</button></div></div>' +
+      '<div class="mp-progress" style="margin-top:14px"><i style="width:' + pct + '%"></i></div>' +
+      '<div class="vp-foot"><span>' + ps.length + ' pembayaran · ' + pct + '%</span><button type="button" class="lnk" data-export="' + esc(k.idKontrak) + '">Ekspor daftar pembayaran</button></div></div>';
+    return h;
+  }
+
+  function render() {
+    var f = kontrak.filter(function (k) {
+      var p = proj(k); if (p && !MP.canSeeProject(p)) return false;
+      return filter === 'all' || (filter === 'done') === isDone(k);
+    }).sort(function (a, b) { return isDone(a) - isDone(b) || String(MP.isoDate(a.deadline) || '9').localeCompare(String(MP.isoDate(b.deadline) || '9')); });
+    $('#grid').innerHTML = f.length ? f.map(card).join('') : '<div class="mp-card" style="grid-column:1/-1"><div class="mp-empty">Belum ada proyek vendor' + (filter !== 'all' ? ' di kategori ini' : '') + '.</div></div>';
+  }
+  async function load() {
+    var d = await MP.loadAll({ k: 'getKontrakVendor', b: 'getPembayaranVendor', v: 'getVendor', p: 'getProyek' });
+    kontrak = d.k; bayar = d.b; vendors = d.v; proyek = d.p;
+    if (d._error) MP.toast(d._error, 'err');
+    render();
+  }
+
+  $('#filter').addEventListener('click', function (e) {
+    var b = e.target.closest('button'); if (!b) return;
+    filter = b.dataset.f; MP.$$('#filter button').forEach(function (x) { x.classList.toggle('on', x === b); }); render();
+  });
+  $('#addBtn').addEventListener('click', function () { openForm(null); });
+  $('#grid').addEventListener('click', function (e) {
+    var t;
+    if ((t = e.target.closest('[data-toggle]'))) { var c = t.closest('.vp-card'); c.classList.toggle('open'); opened[t.dataset.toggle] = c.classList.contains('open'); return; }
+    if ((t = e.target.closest('[data-edit]'))) return openForm(find(t.dataset.edit));
+    if ((t = e.target.closest('[data-pay]'))) return openPay(find(t.dataset.pay));
+    if ((t = e.target.closest('[data-delpay]'))) return delPay(t.dataset.delpay);
+    if ((t = e.target.closest('[data-done]'))) return toggleDone(find(t.dataset.done));
+    if ((t = e.target.closest('[data-export]'))) return exportCsv([find(t.dataset.export)]);
+  });
+  function find(id) { return kontrak.filter(function (k) { return String(k.idKontrak) === String(id); })[0]; }
+
+  async function toggleDone(k) {
+    var r = await MP.post('updateKontrakVendor', { idKontrak: k.idKontrak, status: isDone(k) ? 'open' : 'done' });
+    if (!r.success) return MP.toast(r.message || 'Gagal', 'err');
+    MP.toast(isDone(k) ? 'Dibuka kembali' : 'Ditandai selesai', 'ok'); load();
+  }
+  async function delPay(id) {
+    if (!(await MP.confirm('Hapus pembayaran ini? Catatan pengeluaran proyek yang terkait ikut dihapus.'))) return;
+    var r = await MP.post('deletePembayaranVendor', { idBayar: id });
+    if (!r.success) return MP.toast(r.message || 'Gagal menghapus', 'err');
+    MP.toast('Pembayaran dihapus', 'ok'); load();
+  }
+
+  /* ---------- ekspor CSV ---------- */
+  function exportCsv(list) {
+    var rows = [['Tanggal', 'Vendor', 'Kode proyek', 'Proyek', 'Pekerjaan', 'Jumlah', 'Metode', 'Catatan']];
+    list.forEach(function (k) {
+      paysOf(k).slice().reverse().forEach(function (b) {
+        rows.push([MP.isoDate(b.tanggal), k.vendor, k.proyekKode || '', k.proyekNama || '', k.judul || '', MP.num(b.jumlah), b.metode || '', b.catatan || '']);
+      });
+    });
+    if (rows.length === 1) return MP.toast('Belum ada pembayaran untuk diekspor', 'err');
+    var csv = '﻿' + rows.map(function (r) { return r.map(function (c) { return '"' + String(c).replace(/"/g, '""') + '"'; }).join(','); }).join('\r\n');
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    a.download = 'pembayaran-vendor-' + MP.today() + '.csv';
+    document.body.appendChild(a); a.click(); a.remove();
+  }
+  $('#exportAll').addEventListener('click', function () { exportCsv(kontrak); });
+
+  /* ---------- form kontrak ---------- */
+  function openForm(k) {
+    var edit = !!k; k = k || {};
+    var its = edit ? itemsOf(k) : [];
+    var vlist = vendors.filter(function (v) { return String(v.tipe || 'vendor').toLowerCase() !== 'store'; });
+    var plist = proyek.filter(MP.canSeeProject).filter(function (p) { var s = MP.normStatus(p.status); return s === 'active' || s === 'on hold' || (edit && p.kodeProyek === k.proyekKode); });
+    var body =
+      '<div class="mp-field"><label class="mp-label">Vendor</label><select class="mp-select" name="vendor"><option value="">— Pilih vendor —</option>' +
+      vlist.map(function (v) { return '<option value="' + esc(v.namaVendor) + '"' + (v.namaVendor === k.vendor ? ' selected' : '') + '>' + esc(v.namaVendor) + '</option>'; }).join('') + '</select>' +
+      (vlist.length ? '' : '<p class="mp-hint">Belum ada vendor. <a href="vendor.html" style="color:var(--forest);font-weight:600">Tambah vendor dulu</a>.</p>') + '</div>' +
+      '<div class="mp-field"><label class="mp-label">Proyek</label><select class="mp-select" name="proyek"><option value="">— Pilih proyek —</option>' +
+      plist.map(function (p) { return '<option value="' + esc(p.idProyek) + '"' + (p.kodeProyek === k.proyekKode && p.namaProyek === k.proyekNama ? ' selected' : '') + '>' + esc(MP.projectLabel(p)) + '</option>'; }).join('') + '</select></div>' +
+      '<div class="mp-field"><label class="mp-label">Judul pekerjaan</label><input class="mp-input" name="judul" placeholder="mis. Pengerjaan lemari loker" value="' + esc(k.judul || '') + '"></div>' +
+      '<div class="mp-label" style="margin-top:4px">Rincian item (opsional)</div><div class="vp-items" id="itemsBox"></div>' +
+      '<button type="button" class="mp-btn sm" id="addItem">' + MP.icon('plus') + ' Tambah item</button>' +
+      '<div class="mp-row2" style="margin-top:14px"><div class="mp-field"><label class="mp-label">Nilai kontrak</label><div class="mp-money"><span>Rp</span><input class="mp-input" name="nilai" placeholder="0"></div></div>' +
+      '<div class="mp-field"><label class="mp-label">Tenggat</label><input class="mp-input" type="date" name="deadline" value="' + esc(MP.isoDate(k.deadline)) + '"></div></div>' +
+      '<div class="mp-field"><label class="mp-label">Catatan</label><input class="mp-input" name="catatan" value="' + esc(k.catatan || '') + '"></div>' +
+      (edit ? '<div style="margin-top:6px"><button type="button" class="mp-btn sm" id="delK" style="color:var(--rust)">' + MP.icon('trash') + ' Hapus proyek vendor</button></div>' : '');
+    var m = MP.modal({
+      title: edit ? 'Edit proyek vendor' : 'Proyek vendor baru', body: body, wide: true, okText: edit ? 'Simpan' : 'Buat',
+      onSubmit: async function (f) {
+        var p = proyek.filter(function (x) { return String(x.idProyek) === f.proyek.value; })[0];
+        if (!f.vendor.value) { MP.toast('Pilih vendor', 'err'); return false; }
+        if (!p) { MP.toast('Pilih proyek', 'err'); return false; }
+        if (!f.judul.value.trim()) { MP.toast('Judul pekerjaan wajib diisi', 'err'); return false; }
+        var nilai = MP.moneyVal(f.nilai);
+        if (nilai <= 0) { MP.toast('Nilai kontrak harus lebih dari 0', 'err'); return false; }
+        var items = collectItems();
+        var payload = { vendor: f.vendor.value, proyekKode: p.kodeProyek || '', proyekNama: p.namaProyek, judul: f.judul.value.trim(), nilaiKontrak: nilai,
+          deadline: f.deadline.value, items: JSON.stringify(items), catatan: f.catatan.value.trim() };
+        if (edit) payload.idKontrak = k.idKontrak; else payload.status = 'open';
+        var r = await MP.post(edit ? 'updateKontrakVendor' : 'addKontrakVendor', payload);
+        if (!r.success) { MP.toast(r.message || 'Gagal menyimpan', 'err'); return false; }
+        MP.toast('Tersimpan', 'ok'); load();
+      }
+    });
+    var f = m.el, box = $('#itemsBox', f);
+    MP.moneyInput(f.nilai); if (edit) MP.setMoney(f.nilai, MP.num(k.nilaiKontrak));
+    function addRow(it) {
+      var d = document.createElement('div'); d.className = 'row';
+      d.innerHTML = '<input class="mp-input" data-n placeholder="Nama item" value="' + esc(it ? it.nama : '') + '"><div class="mp-money"><span>Rp</span><input class="mp-input" data-v placeholder="0"></div><button type="button" class="mp-btn icon" aria-label="Hapus">' + MP.icon('x') + '</button>';
+      var v = $('[data-v]', d); MP.moneyInput(v); if (it) MP.setMoney(v, MP.num(it.nilai));
+      v.addEventListener('input', sum);
+      $('button', d).addEventListener('click', function () { d.remove(); sum(); });
+      box.appendChild(d);
+    }
+    function collectItems() {
+      return MP.$$('.row', box).map(function (r) { return { nama: $('[data-n]', r).value.trim(), nilai: MP.moneyVal($('[data-v]', r)) }; }).filter(function (i) { return i.nama || i.nilai; });
+    }
+    function sum() { var t = collectItems().reduce(function (s, i) { return s + i.nilai; }, 0); if (t > 0) MP.setMoney(f.nilai, t); }
+    its.forEach(addRow);
+    $('#addItem', f).addEventListener('click', function () { addRow(null); });
+    var dk = $('#delK', f);
+    if (dk) dk.addEventListener('click', async function () {
+      if (!(await MP.confirm('Hapus proyek vendor "' + k.judul + '" milik ' + k.vendor + '?'))) return;
+      var r = await MP.post('deleteKontrakVendor', { idKontrak: k.idKontrak });
+      if (!r.success) return MP.toast(r.message || 'Gagal menghapus', 'err');
+      m.close(); MP.toast('Dihapus', 'ok'); load();
+    });
+  }
+
+  /* ---------- catat pembayaran ---------- */
+  function openPay(k) {
+    var rem = MP.num(k.nilaiKontrak) - paid(k), photos = [];
+    var body =
+      '<div class="mp-kv"><span>' + esc(k.vendor) + ' — ' + esc(k.judul || '') + '</span><b>Sisa ' + MP.rupiah(rem) + '</b></div>' +
+      '<div class="mp-field" style="margin-top:12px"><label class="mp-label">Jumlah dibayar</label><div class="mp-money big"><span>Rp</span><input class="mp-input" name="jumlah" placeholder="0"></div>' +
+      (rem > 0 ? '<button type="button" class="mp-btn sm" id="fillRem" style="margin-top:8px">Isi sisa ' + MP.rupiah(rem) + '</button>' : '') + '</div>' +
+      '<div class="mp-row2"><div class="mp-field"><label class="mp-label">Metode</label><select class="mp-select" name="metode"><option>Transfer</option><option>Cash</option><option>Debit</option><option>QRIS</option></select></div>' +
+      '<div class="mp-field"><label class="mp-label">Tanggal</label><input class="mp-input" type="date" name="tanggal" value="' + MP.today() + '"></div></div>' +
+      '<div class="mp-field"><label class="mp-label">Catatan</label><input class="mp-input" name="catatan" placeholder="mis. Termin 1 / DP"></div>' +
+      '<div class="mp-field"><label class="mp-label">Foto bukti transfer</label><div class="vp-photos" id="pp"></div><input type="file" id="pf" accept="image/*" multiple style="display:none"><button type="button" class="mp-btn sm" id="pb" style="margin-top:6px">' + MP.icon('camera') + ' Tambah foto</button></div>' +
+      '<label style="display:flex;gap:8px;align-items:flex-start;font-size:12.5px;color:var(--ink-soft);margin-top:6px"><input type="checkbox" name="catat" checked style="margin-top:2px"> Catat juga sebagai pengeluaran proyek (kategori Pembayaran Vendor)</label>';
+    var m = MP.modal({
+      title: 'Catat pembayaran vendor', body: body, okText: 'Simpan pembayaran',
+      onSubmit: async function (f) {
+        var j = MP.moneyVal(f.jumlah);
+        if (j <= 0) { MP.toast('Jumlah harus lebih dari 0', 'err'); return false; }
+        if (j > rem && rem >= 0 && !(await MP.confirm('Jumlah melebihi sisa kontrak (' + MP.rupiah(rem) + '). Tetap simpan?', 'Ya, simpan'))) return false;
+        var r = await MP.post('addPembayaranVendor', { kontrakId: k.idKontrak, jumlah: j, metode: f.metode.value, tanggal: f.tanggal.value || MP.today(), catatan: f.catatan.value.trim(),
+          catatTransaksi: f.catat.checked, buktiFiles: photos.map(function (p) { return { base64: p.base64, mime: p.mime, name: p.name }; }) });
+        if (!r.success) { MP.toast(r.message || 'Gagal menyimpan', 'err'); return false; }
+        MP.toast('Pembayaran tercatat', 'ok'); opened[k.idKontrak] = true; load();
+      }
+    });
+    var f = m.el; MP.moneyInput(f.jumlah);
+    var fr = $('#fillRem', f); if (fr) fr.addEventListener('click', function () { MP.setMoney(f.jumlah, rem); });
+    $('#pb', f).addEventListener('click', function () { $('#pf', f).click(); });
+    $('#pf', f).addEventListener('change', async function () {
+      var fl = Array.prototype.slice.call(this.files); this.value = '';
+      for (var i = 0; i < fl.length; i++) { try { var im = await MP.readImage(fl[i]); im.url = 'data:' + im.mime + ';base64,' + im.base64; photos.push(im); } catch (e) {} }
+      $('#pp', f).innerHTML = photos.map(function (p) { return '<img alt="bukti" src="' + p.url + '">'; }).join('');
+    });
+  }
+  load();
+});
+</script>
+</body>
+</html>

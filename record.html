@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Catat — Masterpiece.id</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="mp-shell.css">
+<script src="mp-shell.js"></script>
+<style>
+  .rec-grid{ display:grid; grid-template-columns:minmax(0,1.6fr) minmax(0,1fr); gap:24px; align-items:start; }
+  .rec-form{ padding:22px; }
+  .rec-sub-seg{ margin-top:8px; }
+  .rec-fee{ display:flex; align-items:center; gap:8px; margin:10px 0 0; font-size:13px; color:var(--ink-soft); cursor:pointer; }
+  .rec-fee input{ accent-color:var(--forest); width:16px; height:16px; }
+  .rec-photos{ display:flex; flex-wrap:wrap; gap:10px; }
+  .rec-add{ flex:1 1 100%; display:flex; align-items:center; justify-content:center; gap:8px; padding:14px; border:1.5px dashed var(--line); border-radius:14px; background:transparent; color:var(--ink-soft); font:500 13.5px Inter,sans-serif; cursor:pointer; }
+  .rec-add:hover{ background:var(--cream); }
+  .rec-add svg{ width:16px; height:16px; stroke:currentColor; fill:none; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+  .rec-thumb{ position:relative; width:76px; height:76px; border-radius:12px; overflow:hidden; border:1px solid var(--line); }
+  .rec-thumb img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .rec-thumb button{ position:absolute; top:3px; right:3px; width:20px; height:20px; border-radius:50%; border:0; background:rgba(0,0,0,.65); color:#fff; font-size:13px; line-height:1; cursor:pointer; padding:0; }
+  .rec-recent{ padding:8px 0; }
+  .rec-recent h3{ margin:0; padding:14px 18px 6px; font-size:12px; font-weight:600; color:var(--ink-soft); }
+  .rec-item{ display:flex; gap:12px; padding:13px 18px; border-bottom:1px solid var(--line); }
+  .rec-item:last-child{ border-bottom:0; }
+  .rec-dot{ width:8px; height:8px; border-radius:50%; margin-top:6px; flex:none; background:var(--ink-faint); }
+  .rec-dot.out{ background:var(--rust); } .rec-dot.in{ background:var(--forest); }
+  .rec-item .t{ font-size:13.5px; font-weight:600; line-height:1.3; word-break:break-word; }
+  .rec-item .s{ font-size:11.5px; color:var(--ink-soft); margin-top:3px; line-height:1.4; }
+  .rec-amt{ margin-left:auto; text-align:right; font-weight:700; font-size:13.5px; white-space:nowrap; }
+  .rec-amt small{ display:block; font-weight:500; font-size:10.5px; color:var(--ink-faint); margin-top:2px; }
+  .rec-amt.out{ color:var(--rust); } .rec-amt.in{ color:var(--forest); } .rec-amt.neutral{ color:var(--ink); }
+  @media (max-width:980px){ .rec-grid{ grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+<main class="mp-main"><div class="mp-wrap">
+  <div class="mp-head">
+    <div>
+      <h1 class="mp-title" id="greet">Halo</h1>
+      <p class="mp-sub">Catat kas masuk atau keluar. Pilih jenis, isi jumlah, lampirkan nota, lalu simpan.</p>
+    </div>
+  </div>
+
+  <div class="rec-grid">
+    <form class="mp-card rec-form" id="recForm" novalidate>
+      <div class="mp-seg two" id="segMain">
+        <button type="button" data-j="pengeluaran" class="out on">__OUT__ Kas Keluar</button>
+        <button type="button" data-j="pemasukan" class="in">__IN__ Kas Masuk</button>
+      </div>
+      <div class="mp-seg two mini rec-sub-seg" id="segSub">
+        <button type="button" data-j="dropProject" class="neutral">__TR__ Drop ke Proyek</button>
+        <button type="button" data-j="returnCompany" class="neutral">__UN__ Kembali ke Perusahaan</button>
+      </div>
+
+      <div class="mp-field" style="margin-top:20px">
+        <label class="mp-label" for="fJumlah">Jumlah</label>
+        <div class="mp-money big"><span>Rp</span><input class="mp-input" id="fJumlah" placeholder="0"></div>
+        <label class="rec-fee"><input type="checkbox" id="fFeeOn"> Ada biaya transfer</label>
+        <div id="feeWrap" style="display:none;margin-top:10px">
+          <div class="mp-money"><span>Rp</span><input class="mp-input" id="fFee" placeholder="0"></div>
+          <p class="mp-hint">Biaya transfer ikut dihitung sebagai pengeluaran proyek.</p>
+        </div>
+      </div>
+
+      <div class="mp-field">
+        <label class="mp-label" for="fProyek">Proyek (wajib)</label>
+        <select class="mp-select" id="fProyek"><option value="">— Pilih proyek —</option></select>
+      </div>
+
+      <div class="mp-field" id="katWrap">
+        <label class="mp-label" for="fKategori">Kategori</label>
+        <select class="mp-select" id="fKategori"><option value="">— Tanpa kategori —</option></select>
+      </div>
+
+      <div class="mp-row2">
+        <div class="mp-field">
+          <label class="mp-label" for="fMetode">Pembayaran</label>
+          <select class="mp-select" id="fMetode"><option>Cash</option><option>Transfer</option><option>Debit</option><option>QRIS</option></select>
+        </div>
+        <div class="mp-field">
+          <label class="mp-label" for="fTanggal">Tanggal</label>
+          <input class="mp-input" type="date" id="fTanggal">
+        </div>
+      </div>
+
+      <div class="mp-field">
+        <label class="mp-label" for="fCatatan">Catatan</label>
+        <input class="mp-input" id="fCatatan" placeholder="mis. Belanja material — Global Bangunan">
+      </div>
+
+      <div class="mp-field" id="paidWrap">
+        <label class="mp-label" for="fPaid">Dibayar kepada</label>
+        <select class="mp-select" id="fPaid"><option value="">Tidak ditentukan</option></select>
+        <input class="mp-input" id="fPaidOther" placeholder="Nama penerima" style="display:none;margin-top:8px">
+      </div>
+
+      <div class="mp-field">
+        <label class="mp-label">Foto nota</label>
+        <div class="rec-photos" id="photos">
+          <button type="button" class="rec-add" id="addPhoto">__CAM__ Ambil foto atau pilih</button>
+        </div>
+        <input type="file" id="fFile" accept="image/*" multiple style="display:none">
+      </div>
+
+      <button type="submit" class="mp-btn rust block" id="submitBtn">Catat Kas Keluar</button>
+    </form>
+
+    <div class="mp-card flush rec-recent">
+      <h3>Catatan terbaru Anda</h3>
+      <div id="recent"><div class="mp-loading">Memuat…</div></div>
+    </div>
+  </div>
+</div></main>
+
+<script>
+MP.ready(function () {
+  var $ = MP.$, esc = MP.esc;
+  var jenis = 'pengeluaran';
+  var data = { proyek: [], kategori: [], vendor: [], trx: [] };
+  var photos = []; // {base64,mime,name,url}
+
+  // sapaan
+  var h = new Date().getHours();
+  var sapa = h < 11 ? 'Selamat pagi' : h < 15 ? 'Selamat siang' : h < 18 ? 'Selamat sore' : 'Selamat malam';
+  $('#greet').textContent = sapa + ', ' + (MP.user.nama || MP.user.loginId);
+
+  MP.moneyInput($('#fJumlah')); MP.moneyInput($('#fFee'));
+  $('#fTanggal').value = MP.today();
+
+  // ikon pada tombol segmented
+  function ico(n) { return MP.icon(n).replace('<svg', '<svg style="width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round"'); }
+  MP.$$('#recForm button[data-j]').forEach(function (b) {
+    b.innerHTML = b.innerHTML.replace('__OUT__', ico('arrowUpRight')).replace('__IN__', ico('arrowDownLeft')).replace('__TR__', ico('transfer')).replace('__UN__', ico('undo'));
+  });
+  $('#addPhoto').innerHTML = $('#addPhoto').innerHTML.replace('__CAM__', MP.icon('camera'));
+
+  var LABEL = { pengeluaran: 'Catat Kas Keluar', pemasukan: 'Catat Kas Masuk', dropProject: 'Catat Drop ke Proyek', returnCompany: 'Catat Kembali ke Perusahaan' };
+  var CLS = { pengeluaran: 'rust', pemasukan: 'green', dropProject: 'dark', returnCompany: 'dark' };
+
+  function applyJenis() {
+    MP.$$('#segMain button').forEach(function (b) { b.classList.toggle('on', b.dataset.j === jenis); });
+    MP.$$('#segSub button').forEach(function (b) { b.classList.toggle('on', b.dataset.j === jenis); });
+    var sb = $('#submitBtn');
+    sb.className = 'mp-btn block ' + CLS[jenis];
+    sb.textContent = LABEL[jenis];
+    var transfer = jenis === 'dropProject' || jenis === 'returnCompany';
+    $('#katWrap').style.display = transfer ? 'none' : '';
+    $('#paidWrap').style.display = transfer ? 'none' : '';
+    renderKategori();
+  }
+  function renderKategori() {
+    var sel = $('#fKategori'), keep = sel.value;
+    var want = jenis === 'pemasukan' ? 'pemasukan' : 'pengeluaran';
+    var opts = data.kategori.filter(function (k) { return String(k.jenis).toLowerCase() === want; });
+    sel.innerHTML = '<option value="">— Tanpa kategori —</option>' + opts.map(function (k) {
+      return '<option value="' + esc(k.nama) + '">' + esc(k.nama) + '</option>';
+    }).join('');
+    if (keep) sel.value = keep;
+  }
+  MP.$$('#recForm button[data-j]').forEach(function (b) {
+    b.addEventListener('click', function () { jenis = b.dataset.j; applyJenis(); });
+  });
+  $('#fFeeOn').addEventListener('change', function () {
+    $('#feeWrap').style.display = this.checked ? '' : 'none';
+    if (!this.checked) $('#fFee').value = '';
+  });
+  $('#fPaid').addEventListener('change', function () {
+    $('#fPaidOther').style.display = this.value === '__other' ? '' : 'none';
+  });
+
+  // foto
+  $('#addPhoto').addEventListener('click', function () { $('#fFile').click(); });
+  $('#fFile').addEventListener('change', async function () {
+    var files = Array.prototype.slice.call(this.files);
+    this.value = '';
+    for (var i = 0; i < files.length; i++) {
+      try {
+        var im = await MP.readImage(files[i]);
+        im.url = 'data:' + im.mime + ';base64,' + im.base64;
+        photos.push(im);
+      } catch (e) { MP.toast('Gagal membaca foto', 'err'); }
+    }
+    renderPhotos();
+  });
+  function renderPhotos() {
+    var box = $('#photos');
+    MP.$$('.rec-thumb', box).forEach(function (n) { n.remove(); });
+    photos.forEach(function (p, i) {
+      var d = document.createElement('div'); d.className = 'rec-thumb';
+      d.innerHTML = '<img alt="Nota ' + (i + 1) + '" src="' + p.url + '"><button type="button" aria-label="Hapus foto">×</button>';
+      d.querySelector('button').addEventListener('click', function () { photos.splice(i, 1); renderPhotos(); });
+      box.insertBefore(d, $('#addPhoto'));
+    });
+  }
+
+  // daftar terbaru
+  function renderRecent() {
+    var me = MP.user.nama || MP.user.loginId;
+    var rows = data.trx.filter(function (t) { return String(t.diinputOleh || '') === String(me); })
+      .sort(function (a, b) { return MP.isoDate(b.tanggal) < MP.isoDate(a.tanggal) ? -1 : MP.isoDate(b.tanggal) > MP.isoDate(a.tanggal) ? 1 : String(b.id) < String(a.id) ? -1 : 1; })
+      .slice(0, 8);
+    if (!rows.length) { $('#recent').innerHTML = '<div class="mp-empty">Belum ada catatan.</div>'; return; }
+    $('#recent').innerHTML = rows.map(function (t) {
+      var j = String(t.jenis || '').toLowerCase();
+      var cls = j === 'pengeluaran' ? 'out' : j === 'pemasukan' ? 'in' : 'neutral';
+      var sign = j === 'pengeluaran' ? '− ' : j === 'pemasukan' ? '+ ' : '';
+      var meta = [MP.fmtDate(t.tanggal), t.proyekKode || t.proyekTerkait].filter(Boolean).join(' · ');
+      var sub2 = (j === 'dropproject' || j === 'returncompany') ? MP.jenisLabel(j) : (t.kategori || '');
+      var fee = MP.num(t.biayaTransfer);
+      return '<div class="rec-item"><span class="rec-dot ' + cls + '"></span><div style="min-width:0"><div class="t">' + esc(t.keterangan || t.kategori || MP.jenisLabel(j)) +
+        (t.buktiUrl ? ' <span title="Ada bukti" style="color:var(--ink-faint)">' + MP.icon('camera').replace('<svg', '<svg style="width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:1.8;vertical-align:-1px"') + '</span>' : '') +
+        '</div><div class="s">' + esc(meta) + '</div>' + (sub2 ? '<div class="s">' + esc(sub2) + '</div>' : '') + '</div>' +
+        '<div class="rec-amt ' + cls + '">' + sign + MP.rupiah(MP.num(t.jumlah)) + (fee ? '<small>+' + MP.rupiah(fee) + ' transfer</small>' : '') + '</div></div>';
+    }).join('');
+  }
+
+  async function load() {
+    var d = await MP.loadAll({ proyek: 'getProyek', kategori: 'getKategori', vendor: 'getVendor', trx: 'getTransaksi' });
+    if (d._error) MP.toast(d._error, 'err');
+    data = d;
+    var aktif = d.proyek.filter(function (p) { var s = MP.normStatus(p.status); return s === 'active' || s === 'on hold'; });
+    var keep = $('#fProyek').value;
+    $('#fProyek').innerHTML = '<option value="">— Pilih proyek —</option>' + aktif.map(function (p) {
+      return '<option value="' + esc(p.idProyek) + '">' + esc(MP.projectLabel(p)) + '</option>';
+    }).join('');
+    if (keep) $('#fProyek').value = keep;
+    $('#fPaid').innerHTML = '<option value="">Tidak ditentukan</option>' + d.vendor.map(function (v) {
+      return '<option value="' + esc(v.namaVendor) + '">' + esc(v.namaVendor) + '</option>';
+    }).join('') + '<option value="__other">Lainnya…</option>';
+    renderKategori(); renderRecent();
+  }
+
+  $('#recForm').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    var jumlah = MP.moneyVal($('#fJumlah'));
+    if (jumlah <= 0) { MP.toast('Jumlah harus lebih dari 0', 'err'); $('#fJumlah').focus(); return; }
+    var proj = data.proyek.filter(function (p) { return String(p.idProyek) === $('#fProyek').value; })[0];
+    if (!proj) { MP.toast('Pilih proyek dulu', 'err'); $('#fProyek').focus(); return; }
+    var transfer = jenis === 'dropProject' || jenis === 'returnCompany';
+    var paid = '', vendor = '';
+    if (!transfer) {
+      var pv = $('#fPaid').value;
+      if (pv === '__other') paid = $('#fPaidOther').value.trim();
+      else if (pv) { paid = pv; vendor = pv; }
+    }
+    var payload = {
+      tanggal: $('#fTanggal').value || MP.today(), jenis: jenis,
+      kategori: transfer ? '' : $('#fKategori').value, jumlah: jumlah,
+      biayaTransfer: $('#fFeeOn').checked ? MP.moneyVal($('#fFee')) : 0,
+      keterangan: $('#fCatatan').value.trim(),
+      proyekTerkait: proj.namaProyek, proyekKode: proj.kodeProyek || '',
+      vendorTerkait: vendor, dibayarKepada: paid,
+      metodePembayaran: $('#fMetode').value, diinputOleh: MP.user.nama || MP.user.loginId,
+      buktiFiles: photos.map(function (p) { return { base64: p.base64, mime: p.mime, name: p.name }; })
+    };
+    var btn = $('#submitBtn'); btn.disabled = true; var old = btn.textContent; btn.textContent = 'Menyimpan…';
+    var r = await MP.post('addTransaksi', payload);
+    btn.disabled = false; btn.textContent = old;
+    if (!r.success) { MP.toast(r.message || 'Gagal menyimpan', 'err'); return; }
+    MP.toast(LABEL[jenis].replace('Catat', 'Tercatat:'), 'ok');
+    $('#fJumlah').value = ''; $('#fFee').value = ''; $('#fFeeOn').checked = false; $('#feeWrap').style.display = 'none';
+    $('#fCatatan').value = ''; $('#fKategori').value = ''; $('#fPaid').value = ''; $('#fPaidOther').value = ''; $('#fPaidOther').style.display = 'none';
+    photos = []; renderPhotos();
+    var g = await MP.get('getTransaksi'); if (g.success) { data.trx = g.data || []; renderRecent(); }
+  });
+
+  applyJenis();
+  load();
+});
+</script>
+</body>
+</html>

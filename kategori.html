@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kategori — Masterpiece.id</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="mp-shell.css">
+<script src="mp-shell.js"></script>
+<style>
+  .kt-cols{ display:grid; grid-template-columns:1fr 1fr; gap:22px; align-items:start; }
+  .kt-colhead{ font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-soft); margin:0 0 10px 4px; display:flex; align-items:center; gap:8px; }
+  .kt-row{ display:flex; align-items:center; gap:12px; padding:12px 16px; border-bottom:1px solid var(--line); }
+  .kt-row:last-child{ border-bottom:0; }
+  .kt-row .grow{ flex:1; min-width:0; }
+  .kt-row .t{ font-weight:600; font-size:14px; }
+  .kt-row .s{ font-size:11.5px; color:var(--ink-soft); margin-top:3px; display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
+  @media (max-width:900px){ .kt-cols{ grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+<main class="mp-main"><div class="mp-wrap">
+  <div class="mp-head">
+    <div>
+      <h1 class="mp-title">Kategori</h1>
+      <p class="mp-sub">Kategori pemasukan dan pengeluaran yang dipakai saat mencatat transaksi.</p>
+    </div>
+    <div class="mp-actions"><button class="mp-btn dark" id="addBtn" type="button"><span id="icPlus"></span> Kategori baru</button></div>
+  </div>
+  <div class="kt-cols">
+    <section><h2 class="kt-colhead">Pengeluaran <span class="mp-count" id="cntOut">0</span></h2><div class="mp-card flush" id="listOut"><div class="mp-loading">Memuat…</div></div></section>
+    <section><h2 class="kt-colhead">Pemasukan <span class="mp-count" id="cntIn">0</span></h2><div class="mp-card flush" id="listIn"><div class="mp-loading">Memuat…</div></div></section>
+  </div>
+</div></main>
+
+<script>
+MP.ready(function () {
+  var $ = MP.$, esc = MP.esc;
+  var kat = [], trx = [];
+  var LINGKUP = { Project: 'Proyek', Office: 'Kantor', Both: 'Keduanya' };
+  var TAGS = ['', 'Hutang / Piutang', 'Karyawan', 'Vendor Project'];
+  $('#icPlus').innerHTML = MP.icon('plus');
+
+  function usage(k) {
+    var n = String(k.nama).trim().toLowerCase();
+    return trx.filter(function (t) { return String(t.kategori || '').trim().toLowerCase() === n; }).length;
+  }
+  function row(k) {
+    var u = usage(k);
+    return '<div class="kt-row"><div class="grow"><div class="t">' + esc(k.nama) + '</div><div class="s"><span>' + esc(LINGKUP[k.lingkup] || k.lingkup || 'Keduanya') + '</span>' +
+      (u ? '<span>· ' + u + ' catatan</span>' : '') + (k.tag ? '<span class="mp-pill amber">' + esc(k.tag) + '</span>' : '') + '</div></div>' +
+      '<button type="button" class="mp-btn icon" data-edit="' + esc(k.id) + '" aria-label="Edit">' + MP.icon('edit') + '</button></div>';
+  }
+  function render() {
+    ['pengeluaran', 'pemasukan'].forEach(function (j) {
+      var arr = kat.filter(function (k) { return String(k.jenis).toLowerCase() === j; }).sort(function (a, b) { return String(a.nama).localeCompare(String(b.nama)); });
+      $(j === 'pengeluaran' ? '#cntOut' : '#cntIn').textContent = arr.length;
+      $(j === 'pengeluaran' ? '#listOut' : '#listIn').innerHTML = arr.length ? arr.map(row).join('') : '<div class="mp-empty">Belum ada kategori.</div>';
+    });
+  }
+  async function load() {
+    var d = await MP.loadAll({ k: 'getKategori', t: 'getTransaksi' });
+    kat = d.k; trx = d.t;
+    if (d._error) MP.toast(d._error, 'err');
+    render();
+  }
+  document.addEventListener('click', function (e) {
+    var ed = e.target.closest('[data-edit]');
+    if (ed) openForm(kat.filter(function (k) { return String(k.id) === ed.dataset.edit; })[0]);
+  });
+  $('#addBtn').addEventListener('click', function () { openForm(null); });
+
+  function openForm(k) {
+    var edit = !!k; k = k || {};
+    var body =
+      '<div class="mp-field"><label class="mp-label">Nama kategori</label><input class="mp-input" name="nama" required value="' + esc(k.nama || '') + '"></div>' +
+      '<div class="mp-row2"><div class="mp-field"><label class="mp-label">Jenis</label><select class="mp-select" name="jenis"><option value="pengeluaran"' + (String(k.jenis) === 'pemasukan' ? '' : ' selected') + '>Pengeluaran</option><option value="pemasukan"' + (String(k.jenis) === 'pemasukan' ? ' selected' : '') + '>Pemasukan</option></select></div>' +
+      '<div class="mp-field"><label class="mp-label">Dipakai untuk</label><select class="mp-select" name="lingkup">' +
+      ['Project', 'Office', 'Both'].map(function (v) { return '<option value="' + v + '"' + ((k.lingkup || 'Both') === v ? ' selected' : '') + '>' + LINGKUP[v] + '</option>'; }).join('') + '</select></div></div>' +
+      '<div class="mp-field"><label class="mp-label">Penanda khusus (opsional)</label><select class="mp-select" name="tag">' +
+      TAGS.map(function (v) { return '<option value="' + v + '"' + ((k.tag || '') === v ? ' selected' : '') + '>' + (v || 'Tidak ada') + '</option>'; }).join('') + '</select>' +
+      '<p class="mp-hint">Penanda dipakai laporan untuk memisahkan hutang-piutang, gaji karyawan, dan pembayaran vendor dari biaya operasional biasa.</p></div>';
+    if (edit) body += '<div class="mp-btns" style="margin-top:6px"><button type="button" class="mp-btn sm" id="delKat" style="color:var(--rust)">' + MP.icon('trash') + ' Hapus kategori</button></div>';
+    var m = MP.modal({
+      title: edit ? 'Edit kategori' : 'Kategori baru', body: body, okText: edit ? 'Simpan' : 'Buat kategori',
+      onSubmit: async function (f) {
+        var p = { nama: f.nama.value.trim(), jenis: f.jenis.value, lingkup: f.lingkup.value, tag: f.tag.value };
+        if (!p.nama) { MP.toast('Nama kategori wajib diisi', 'err'); return false; }
+        var dup = kat.some(function (x) { return String(x.id) !== String(k.id) && String(x.jenis) === p.jenis && String(x.nama).trim().toLowerCase() === p.nama.toLowerCase(); });
+        if (dup) { MP.toast('Kategori dengan nama itu sudah ada', 'err'); return false; }
+        if (edit) p.id = k.id;
+        var r = await MP.post(edit ? 'updateKategori' : 'addKategori', p);
+        if (!r.success) { MP.toast(r.message || 'Gagal menyimpan', 'err'); return false; }
+        MP.toast('Kategori tersimpan', 'ok'); load();
+      }
+    });
+    var del = $('#delKat', m.el);
+    if (del) del.addEventListener('click', async function () {
+      var u = usage(k);
+      var ok = await MP.confirm(u ? '"' + k.nama + '" dipakai di ' + u + ' catatan. Transaksi lama tetap menyimpan nama ini, tapi kategori hilang dari pilihan. Tetap hapus?' : 'Hapus kategori "' + k.nama + '"?');
+      if (!ok) return;
+      var r = await MP.post('deleteKategori', { id: k.id, nama: k.nama });
+      if (!r.success) return MP.toast(r.message || 'Gagal menghapus', 'err');
+      m.close(); MP.toast('Kategori dihapus', 'ok'); load();
+    });
+  }
+  load();
+});
+</script>
+</body>
+</html>

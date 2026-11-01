@@ -1,0 +1,57 @@
+<?xml version="1.0" ?>
+<VideoPath version="1" durationSeconds="60" easingInOut="1" shakyCam="0">
+    <Keyframes count="13">
+        <Keyframe order="0" hour="13.5" fieldOfViewRad="2.44346" focalPoint="18.6651">
+            <Position x="2.99634" y="2.29839" z="5.15093" />
+            <LookAt x="-0.0186398" y="-0.0682424" z="-0.997495" />
+        </Keyframe>
+        <Keyframe order="1">
+            <Position x="2.91246" y="1.99133" z="0.662641" />
+            <LookAt x="-0.0186398" y="-0.0682424" z="-0.997495" />
+        </Keyframe>
+        <Keyframe order="2">
+            <Position x="4.32025" y="2.14568" z="2.89321" />
+            <LookAt x="-0.0186398" y="-0.0682423" z="-0.997495" />
+        </Keyframe>
+        <Keyframe order="3">
+            <Position x="4.32159" y="1.09481" z="2.96508" />
+            <LookAt x="0.00741152" y="0.0970831" z="-0.995249" />
+        </Keyframe>
+        <Keyframe order="4">
+            <Position x="2.98437" y="1.09481" z="2.72423" />
+            <LookAt x="0.355751" y="0.118058" z="-0.927094" />
+        </Keyframe>
+        <Keyframe order="5">
+            <Position x="1.36067" y="1.09481" z="1.76375" />
+            <LookAt x="0.599359" y="0.0779811" z="-0.796673" />
+        </Keyframe>
+        <Keyframe order="6">
+            <Position x="1.04367" y="1.09481" z="1.49496" />
+            <LookAt x="0.662041" y="0.0498751" z="-0.747806" />
+        </Keyframe>
+        <Keyframe order="7">
+            <Position x="2.16297" y="1.14211" z="1.22492" />
+            <LookAt x="0.663219" y="0.049875" z="-0.746762" />
+        </Keyframe>
+        <Keyframe order="8">
+            <Position x="3.77443" y="1.14211" z="2.10204" />
+            <LookAt x="0.294465" y="0.0279372" z="-0.955254" />
+        </Keyframe>
+        <Keyframe order="9">
+            <Position x="4.17019" y="1.17959" z="0.820828" />
+            <LookAt x="0.294465" y="0.0279372" z="-0.955254" />
+        </Keyframe>
+        <Keyframe order="10">
+            <Position x="4.20119" y="3.49078" z="0.506252" />
+            <LookAt x="-0.461067" y="-0.16048" z="-0.872733" />
+        </Keyframe>
+        <Keyframe order="11">
+            <Position x="3.15556" y="3.44697" z="0.700671" />
+            <LookAt x="-0.298542" y="-0.157829" z="-0.941256" />
+        </Keyframe>
+        <Keyframe order="12">
+            <Position x="0.89756" y="3.44697" z="0.744793" />
+            <LookAt x="0.220507" y="-0.237486" z="-0.946032" />
+        </Keyframe>
+    </Keyframes>
+</VideoPath>

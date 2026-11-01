@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Klien — Masterpiece.id</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="mp-shell.css">
+<script src="mp-shell.js"></script>
+<style>
+  .kl-item{ border-bottom:1px solid var(--line); }
+  .kl-item:last-child{ border-bottom:0; }
+  .kl-sum{ display:flex; align-items:center; gap:14px; padding:13px 18px; cursor:pointer; user-select:none; }
+  .kl-sum:hover{ background:var(--cream); }
+  .kl-code{ font:700 11px 'Inter',monospace; letter-spacing:.08em; background:var(--cream); border:1px solid var(--line); border-radius:8px; padding:5px 8px; min-width:46px; text-align:center; color:var(--ink-soft); }
+  .kl-sum .grow{ flex:1; min-width:0; }
+  .kl-sum .t{ font-weight:600; font-size:14.5px; }
+  .kl-sum .s{ font-size:12px; color:var(--ink-soft); margin-top:2px; }
+  .kl-body{ display:none; padding:6px 20px 18px; background:var(--cream); border-top:1px solid var(--line); }
+  .kl-item.open .kl-body{ display:block; }
+  .kl-item.open .mp-chev{ transform:rotate(180deg); }
+  .kl-sub{ font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-faint); margin:14px 0 6px; }
+  .kl-proj{ display:flex; justify-content:space-between; gap:10px; font-size:13px; padding:6px 0; border-bottom:1px dashed var(--line); }
+  .kl-proj:last-child{ border-bottom:0; }
+  .kl-btns{ display:flex; gap:8px; margin-top:14px; flex-wrap:wrap; }
+  .kl-search{ position:relative; margin-bottom:18px; }
+  .kl-search svg{ position:absolute; left:14px; top:50%; transform:translateY(-50%); width:16px; height:16px; stroke:var(--ink-faint); fill:none; stroke-width:1.8; }
+  .kl-search input{ padding-left:40px; }
+</style>
+</head>
+<body>
+<main class="mp-main"><div class="mp-wrap">
+  <div class="mp-head">
+    <div>
+      <h1 class="mp-title">Klien</h1>
+      <p class="mp-sub">Empat huruf kode klien menjadi awal kode setiap proyeknya. Kode baru otomatis terdaftar di sini.</p>
+    </div>
+    <div class="mp-actions"><button class="mp-btn dark" id="addBtn" type="button"><span id="icPlus"></span> Tambah klien</button></div>
+  </div>
+  <div class="kl-search"><span id="icSearch"></span><input class="mp-input" id="searchBox" type="search" placeholder="Cari nama, kode, atau telepon..."></div>
+  <div class="mp-card flush" id="list"><div class="mp-loading">Memuat…</div></div>
+</div></main>
+
+<script>
+MP.ready(function () {
+  var $ = MP.$, esc = MP.esc;
+  var klien = [], proyek = [], trx = [], dok = [], opened = {};
+  $('#icPlus').innerHTML = MP.icon('plus'); $('#icSearch').innerHTML = MP.icon('search');
+
+  function projectsOf(k) { return proyek.filter(function (p) { return String(p.klienKode || '').toUpperCase() === String(k.kodeKlien).toUpperCase(); }); }
+  function docsOf(k) { return dok.filter(function (d) { return String(d.klienKode || '').toUpperCase() === String(k.kodeKlien).toUpperCase(); }); }
+
+  function itemHTML(k) {
+    var ps = projectsOf(k), ds = docsOf(k), open = !!opened[k.kodeKlien];
+    var contact = k.telepon ? String(k.telepon) : 'Belum ada kontak';
+    var sub = contact + (ds.length ? ' · ' + ds.length + ' dokumen' : '') + (ps.length ? ' · ' + ps.length + ' proyek' : '');
+    var h = '<div class="kl-item' + (open ? ' open' : '') + '" data-k="' + esc(k.kodeKlien) + '"><div class="kl-sum"><span class="kl-code">' + esc(k.kodeKlien) + '</span>' +
+      '<div class="grow"><div class="t">' + esc(k.namaKlien) + '</div><div class="s">' + esc(sub) + '</div></div>' + MP.icon('chev', 'mp-chev') + '</div><div class="kl-body">' +
+      '<div class="mp-kv"><span>Telepon / WhatsApp</span><b>' + esc(k.telepon || '—') + '</b></div>' +
+      '<div class="mp-kv"><span>Perusahaan</span><b>' + esc(k.perusahaan || '—') + '</b></div>' +
+      '<div class="mp-kv"><span>Alamat</span><b style="text-align:right">' + esc(k.alamat || '—') + '</b></div>' +
+      '<div class="mp-kv"><span>No. KTP</span><b>' + esc(k.ktp || '—') + '</b></div>' +
+      (k.catatan ? '<div class="mp-kv"><span>Catatan</span><b style="text-align:right">' + esc(k.catatan) + '</b></div>' : '');
+    h += '<div class="kl-sub">Proyek</div>';
+    if (!ps.length) h += '<div class="mp-hint">Belum ada proyek untuk klien ini.</div>';
+    ps.forEach(function (p) {
+      var st = MP.projectStats(p, trx);
+      h += '<div class="kl-proj"><span><a href="proyek.html" style="color:inherit;font-weight:600">' + esc(MP.projectLabel(p)) + '</a></span><span>' + MP.rupiah(st.nilai) + ' · <span class="mp-pill ' + (MP.normStatus(p.status) === 'active' ? 'green' : 'gray') + '">' + esc(MP.normStatus(p.status)) + '</span></span></div>';
+    });
+    h += '<div class="kl-btns"><button type="button" class="mp-btn sm" data-edit="' + esc(k.kodeKlien) + '">' + MP.icon('edit') + ' Edit detail</button>' +
+      '<a class="mp-btn sm" href="invoice.html?klien=' + encodeURIComponent(k.kodeKlien) + '">' + MP.icon('print') + ' Buat invoice</a>' +
+      '<button type="button" class="mp-btn sm" data-del="' + esc(k.kodeKlien) + '" style="color:var(--rust)">' + MP.icon('trash') + ' Hapus</button></div>';
+    return h + '</div></div>';
+  }
+
+  function render() {
+    var q = $('#searchBox').value.trim().toLowerCase();
+    var f = klien.filter(function (k) { return !q || [k.kodeKlien, k.namaKlien, k.telepon, k.perusahaan].join(' ').toLowerCase().indexOf(q) !== -1; })
+      .sort(function (a, b) { return String(a.namaKlien).localeCompare(String(b.namaKlien)); });
+    $('#list').innerHTML = f.length ? f.map(itemHTML).join('') : '<div class="mp-empty">' + (q ? 'Tidak ada klien yang cocok.' : 'Belum ada klien. Klik "Tambah klien".') + '</div>';
+  }
+
+  async function load() {
+    var d = await MP.loadAll({ k: 'getKlien', p: 'getProyek', t: 'getTransaksi', d: 'getDokumen' });
+    klien = d.k; proyek = d.p; trx = d.t; dok = d.d;
+    if (d._error) MP.toast(d._error, 'err');
+    render();
+  }
+
+  document.addEventListener('click', function (e) {
+    var s = e.target.closest('.kl-sum');
+    if (s) { var it = s.parentNode; it.classList.toggle('open'); opened[it.dataset.k] = it.classList.contains('open'); return; }
+    var ed = e.target.closest('[data-edit]'); if (ed) return openForm(find(ed.dataset.edit));
+    var dl = e.target.closest('[data-del]'); if (dl) return remove(dl.dataset.del);
+  });
+  function find(code) { return klien.filter(function (k) { return String(k.kodeKlien) === code; })[0]; }
+  $('#searchBox').addEventListener('input', MP.debounce(render, 120));
+  $('#addBtn').addEventListener('click', function () { openForm(null); });
+
+  // usulan kode dari nama: buang gelar, ambil 4 huruf pertama
+  function suggestCode(name) {
+    var n = String(name).replace(/\b(mr|mrs|ms|bapak|bpk|ibu|pak|bu|kak|pt|cv)\b\.?/ig, '').replace(/[^a-zA-Z]/g, '').toUpperCase();
+    return n.slice(0, 4);
+  }
+
+  function openForm(k) {
+    var edit = !!k; k = k || {};
+    var body =
+      '<div class="mp-field"><label class="mp-label">Kode klien</label><input class="mp-input" name="kodeKlien" maxlength="4" placeholder="DLSD" style="text-transform:uppercase;letter-spacing:.1em" value="' + esc(k.kodeKlien || '') + '"' + (edit ? ' readonly' : '') + '>' +
+      '<p class="mp-hint">Tepat 4 huruf. Menjadi awal kode setiap proyek klien ini, jadi hanya boleh dimiliki satu klien.</p></div>' +
+      '<div class="mp-field"><label class="mp-label">Nama klien</label><input class="mp-input" name="namaKlien" required value="' + esc(k.namaKlien || '') + '"></div>' +
+      '<div class="mp-field"><label class="mp-label">Telepon (opsional)</label><input class="mp-input" name="telepon" inputmode="tel" value="' + esc(k.telepon || '') + '"></div>';
+    if (edit) {
+      body += '<div class="mp-field"><label class="mp-label">Perusahaan</label><input class="mp-input" name="perusahaan" value="' + esc(k.perusahaan || '') + '"></div>' +
+        '<div class="mp-field"><label class="mp-label">Alamat</label><textarea class="mp-textarea" name="alamat" rows="2">' + esc(k.alamat || '') + '</textarea></div>' +
+        '<div class="mp-field"><label class="mp-label">No. KTP</label><input class="mp-input" name="ktp" inputmode="numeric" value="' + esc(k.ktp || '') + '"></div>' +
+        '<div class="mp-field"><label class="mp-label">Catatan</label><input class="mp-input" name="catatan" value="' + esc(k.catatan || '') + '"></div>';
+    } else {
+      body += '<p class="mp-hint">Sisanya — alamat, data perusahaan, KTP — bisa diisi belakangan lewat Edit detail.</p>';
+    }
+    var m = MP.modal({
+      title: edit ? 'Edit klien' : 'Tambah klien', body: body, okText: edit ? 'Simpan' : 'Tambah klien',
+      onSubmit: async function (f) {
+        var p = { kodeKlien: f.kodeKlien.value.trim().toUpperCase(), namaKlien: f.namaKlien.value.trim(), telepon: f.telepon.value.trim() };
+        ['perusahaan', 'alamat', 'ktp', 'catatan'].forEach(function (x) { if (f[x]) p[x] = f[x].value.trim(); });
+        if (!/^[A-Z]{4}$/.test(p.kodeKlien)) { MP.toast('Kode klien harus tepat 4 huruf', 'err'); return false; }
+        if (!p.namaKlien) { MP.toast('Nama klien wajib diisi', 'err'); return false; }
+        if (!edit && find(p.kodeKlien)) { MP.toast('Kode ' + p.kodeKlien + ' sudah dipakai klien lain', 'err'); return false; }
+        var r = await MP.post(edit ? 'updateKlien' : 'addKlien', p);
+        if (!r.success) { MP.toast(r.message || 'Gagal menyimpan', 'err'); return false; }
+        MP.toast('Klien tersimpan', 'ok'); load();
+      }
+    });
+    if (!edit) {
+      var f = m.el, touched = false;
+      f.kodeKlien.addEventListener('input', function () { touched = true; this.value = this.value.replace(/[^a-zA-Z]/g, '').toUpperCase(); });
+      f.namaKlien.addEventListener('input', function () { if (!touched) f.kodeKlien.value = suggestCode(this.value); });
+    }
+  }
+
+  async function remove(code) {
+    var k = find(code); if (!k) return;
+    if (projectsOf(k).length) return MP.toast('Klien ini masih punya proyek. Hapus/pindahkan proyeknya dulu.', 'err');
+    if (!(await MP.confirm('Hapus klien "' + k.namaKlien + '"?'))) return;
+    var r = await MP.post('deleteKlien', { kodeKlien: code });
+    if (!r.success) return MP.toast(r.message || 'Gagal menghapus', 'err');
+    MP.toast('Klien dihapus', 'ok'); load();
+  }
+  load();
+});
+</script>
+</body>
+</html>
